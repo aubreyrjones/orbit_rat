@@ -28,15 +28,20 @@ float normalize(float low, float val, float high) {
   return (val - low) / range;
 }
 
+unsigned int to_joy(float val) {
+  return (unsigned int) ((val + 1.f) / 2.f * 1023);
+}
+
 
 void normalizeSticks() {
   for (int i = 0; i < n_axes; i++) {
     if (axisValues[i] < axisExtents[i][1]) {
-      normalizedAxes[i] = (1 - normalize(axisExtents[i][0], axisValues[i], axisExtents[i][1])) * -125;
+      normalizedAxes[i] = -(1 - normalize(axisExtents[i][0], axisValues[i], axisExtents[i][1]));
     }
     else {
-      normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]) * 125;
+      normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]);
     }
+    normalizedAxes[i] = -normalizedAxes[i];
   }
 }
 
@@ -46,18 +51,28 @@ void setup() {
 
 }
 
+void sendJoystick() {
+  Joystick.X(to_joy(normalizedAxes[1]));
+  Joystick.Y(to_joy(normalizedAxes[0]));
+  Joystick.sliderLeft(to_joy(normalizedAxes[2]));
+  Joystick.Zrotate(to_joy(normalizedAxes[3]));
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(1000);
-
+  
   readSticks();
   normalizeSticks();
 
-  Serial.print("axes ");
-  for (int i = 0; i < n_axes; i++) {
-    Serial.print(normalizedAxes[i]);
-    Serial.print(",");
-  }
-  Serial.print("\n");
-  delay(80);
+  sendJoystick();
+
+  delay(10);
+
+  // Serial.print("axes ");
+  // for (int i = 0; i < n_axes; i++) {
+  //   Serial.print(normalizedAxes[i]);
+  //   Serial.print(",");
+  // }
+  // Serial.print("\n");
+  // delay(80);
 }
