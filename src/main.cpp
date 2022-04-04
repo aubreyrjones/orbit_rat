@@ -84,10 +84,17 @@ void doUnwind() {
   }
 }
 
+int motionStartIndex = -1;
+
+bool checkDeadzone(int startIndex) {
+  return abs(normalizedAxes[startIndex]) < 0.10 && abs(normalizedAxes[startIndex + 1]) < 0.10;
+}
+
 void sendMouse() {
   if (abs(normalizedAxes[0]) < 0.10 && abs(normalizedAxes[1]) < 0.10) {
     if (!inMove) return;
 
+    Mouse.set_buttons(0, 0, 0);
     doUnwind();
     inMove = false;
     return;
@@ -96,6 +103,7 @@ void sendMouse() {
   if (!inMove) {
     unwindAccumulator[0] = unwindAccumulator[1] = 0;
     inMove = true;
+    Mouse.set_buttons(0, 1, 0);
   }
 
   int xMove = max_mouse_speed * normalizedAxes[0];
