@@ -1,16 +1,21 @@
 #include <Arduino.h>
 #include <Keyboard.h>
 
-constexpr bool calibrate_on_startup = true;
-constexpr int n_axes = 4; // number of axes we're going to sample
+constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
+constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
+constexpr int n_axes = 4; // number of axes we're going to sample.
 constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
-constexpr float deadzone = 0.02;
+constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
 
+// Which pin goes to which axis?
+// pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
 int axisPins[] = {
   1, 0, 8, 7
 };
 
+// which pins are stick-press buttons attached to?
+// this is currently unused.
 int buttonPins[] = {
   2, 9
 };
@@ -161,7 +166,7 @@ void sendMouse() {
     // we're outside the deadzone, so start a new move.
     unwindAccumulator[0] = unwindAccumulator[1] = 0;
     inMove = true;
-    if (motionStartIndex == 2) { // second stick holds shift while it moves
+    if (motionStartIndex == 2) { // second stick holds shift while it moves to get orbit in Fusion 360.
       Keyboard.press(KEY_LEFT_SHIFT);
     }
     delay(10);
@@ -185,14 +190,18 @@ void loop() {
   readSticks();
   normalizeSticks();
 
-  sendJoystick();
+  if /*constexpr*/ (send_joystick_hid) { 
+    sendJoystick();
+  }
+
   sendMouse();
 
   delay(10); // approximately 100 updates a second. It's actually less because of delays elsewhere, but it's plenty fast for CAD or whatever.
 
+  // temporarily uncomment this block to get values printed out to serial for calibration purposes.
   // Serial.print("axes ");
   // for (int i = 0; i < n_axes; i++) {
-  //   Serial.print(normalizedAxes[i]);
+  //   Serial.print(axisValues[i]);
   //   Serial.print(",");
   // }
   // Serial.print("\n");
