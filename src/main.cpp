@@ -2,6 +2,7 @@
 #include <Keyboard.h>
 
 constexpr int n_axes = 4;
+constexpr int max_mouse_speed = 25;
 
 float axisExtents[][3] = {
   {3, 520, 1021},
@@ -16,11 +17,11 @@ bool buttons[2] = {false, false};
 float normalizedAxes[n_axes] = {0, 0, 0, 0};
 
 void readSticks() {
-  axisValues[0] = analogRead(0);
-  axisValues[1] = analogRead(1);
+  axisValues[0] = analogRead(1);
+  axisValues[1] = analogRead(0);
 
-  axisValues[2] = analogRead(7);
-  axisValues[3] = analogRead(8);
+  axisValues[2] = analogRead(8);
+  axisValues[3] = analogRead(7);
 }
 
 float normalize(float low, float val, float high) {
@@ -52,10 +53,58 @@ void setup() {
 }
 
 void sendJoystick() {
-  Joystick.X(to_joy(normalizedAxes[1]));
-  Joystick.Y(to_joy(normalizedAxes[0]));
-  Joystick.sliderLeft(to_joy(normalizedAxes[2]));
-  Joystick.Zrotate(to_joy(normalizedAxes[3]));
+  Joystick.X(to_joy(normalizedAxes[0]));
+  Joystick.Y(to_joy(normalizedAxes[1]));
+  Joystick.sliderLeft(to_joy(normalizedAxes[3]));
+  Joystick.Zrotate(to_joy(normalizedAxes[2]));
+}
+
+int unwindAccumulator[2];
+bool inMove = false;
+
+int max_step(int const& accum) {
+  if (accum > 0) {
+    return -min(accum, 100);
+  }
+  else if (accum < 0) {
+    return min(100, -accum);
+  }
+
+  return 0;
+}
+
+void doUnwind() {
+  while (unwindAccumulator[0] != 0 || unwindAccumulator[1] != 0) {
+    int xMove = max_step(unwindAccumulator[0]);
+    int yMove = max_step(unwindAccumulator[1]);
+
+    Mouse.move(xMove, yMove);
+    unwindAccumulator[0] += xMove;
+    unwindAccumulator[1] += yMove;
+  }
+}
+
+void sendMouse() {
+  if (abs(normalizedAxes[0]) < 0.10 && abs(normalizedAxes[1]) < 0.10) {
+    if (!inMove) return;
+
+    doUnwind();
+    inMove = false;
+    return;
+  }
+
+  if (!inMove) {
+    unwindAccumulator[0] = unwindAccumulator[1] = 0;
+    inMove = true;
+  }
+
+  int xMove = max_mouse_speed * normalizedAxes[0];
+  int yMove = max_mouse_speed * normalizedAxes[1];
+
+  Mouse.move(xMove, yMove);
+
+  unwindAccumulator[0] += xMove;
+  unwindAccumulator[1] += yMove;
 }
 
 void loop() {
@@ -65,6 +114,7 @@ void loop() {
   normalizeSticks();
 
   sendJoystick();
+  sendMouse();
 
   delay(10);
 
