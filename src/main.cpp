@@ -3,6 +3,7 @@
 
 constexpr int n_axes = 4;
 constexpr int max_mouse_speed = 25;
+constexpr int orbit_mouse_speed = 10;
 
 float axisExtents[][3] = {
   {3, 520, 1021},
@@ -91,23 +92,40 @@ bool checkDeadzone(int startIndex) {
 }
 
 void sendMouse() {
-  if (abs(normalizedAxes[0]) < 0.10 && abs(normalizedAxes[1]) < 0.10) {
-    if (!inMove) return;
 
+  if (inMove && checkDeadzone(motionStartIndex)) {
     Mouse.set_buttons(0, 0, 0);
+    if (motionStartIndex == 2) {
+      Keyboard.release(KEY_LEFT_SHIFT);
+    }
     doUnwind();
     inMove = false;
+    return;    
+  }
+
+  if (!checkDeadzone(0)) {
+    motionStartIndex = 0;
+  }
+  else if (!checkDeadzone(2)) {
+    motionStartIndex = 2;
+  }
+  else { 
     return;
   }
 
   if (!inMove) {
     unwindAccumulator[0] = unwindAccumulator[1] = 0;
     inMove = true;
+    if (motionStartIndex == 2) {
+      Keyboard.press(KEY_LEFT_SHIFT);
+    }
     Mouse.set_buttons(0, 1, 0);
   }
 
-  int xMove = max_mouse_speed * normalizedAxes[0];
-  int yMove = max_mouse_speed * normalizedAxes[1];
+  auto speed = motionStartIndex == 0 ? max_mouse_speed : orbit_mouse_speed;
+
+  int xMove = speed * normalizedAxes[motionStartIndex];
+  int yMove = speed * normalizedAxes[motionStartIndex + 1];
 
   Mouse.move(xMove, yMove);
 
