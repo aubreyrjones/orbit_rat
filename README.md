@@ -10,7 +10,8 @@ degrees of freedom, much wider compatibility, and much lower cost. The Orbit Rat
 quite a space mouse, you see.
 
 The OR is designed around a pair of small joysticks, like those on a gamepad controller. These 
-joysticks then control pan and orbit in CAD, art, and graphic design programs.
+joysticks then control pan and orbit in CAD, art, and graphic design programs by specially
+emulating a mouse. _No special drivers or plugins needed_, works in any operating system.
 
 This is not a regular joystick-controlled mouse. This implements a special "rewind" operation
 after ever motion, which resets the mouse cursor position and unlocks near-infinite pan/orbit 
@@ -20,9 +21,7 @@ The cost to build one is around $30 USD. You could build it without any solderin
 breadboard, but it will be bulky. You can easily solder it on protoboard with hand wiring.
 It's also an easy circuit board to design.
 
-Orbit Rat works without any special drivers and without any special plugins for the software.
-
-Tested on Linux and Windows.
+Tested on Linux and Windows. Should work on Mac and mobile OS as well.
 
 Tested to work with default settings in:
 
@@ -43,13 +42,13 @@ the mouse is in a different part of the screen than when you started. You have t
 move the cursor back toward the middle of the screen to get more space if you want to continue the pan. 
 With a traditional joystick-controlled mouse, this is torture.
 
-But not so with Orbit Rat. This is almost as good as a dedicated "3d mouse" with special 
-driver support.
+But not so with Orbit Rat.
 
 As you move, the OR tracks how much mouse motion it has sent to your computer. When you let
 go of the stick, it simply moves the cursor back to where it was when you first pressed the stick. 
 You can now continue the pan just by pressing the stick again. Or, you can continue your work 
-with the cursor just where you left it.
+with the cursor just where you left it. This is almost as much control as a dedicated "3d mouse" 
+with special driver support.
 
 The beauty of this is that it works everywhere, in any operating system, in any application
 that uses middle mouse for pan
