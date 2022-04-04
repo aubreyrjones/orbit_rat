@@ -7,6 +7,7 @@ constexpr int n_axes = 4; // number of axes we're going to sample.
 constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
+constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 
 // Which pin goes to which axis?
 // pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
@@ -99,10 +100,10 @@ bool inMove = false;
 // teensy HID system only spec's mouse moves between -127 and 127.
 int max_step(int const& accum) {
   if (accum > 0) {
-    return -min(accum, 100);
+    return -min(accum, max_unwind_step);
   }
   else if (accum < 0) {
-    return min(100, -accum);
+    return min(max_unwind_step, -accum);
   }
 
   return 0;
