@@ -98,6 +98,7 @@ void sendMouse() {
     if (motionStartIndex == 2) {
       Keyboard.release(KEY_LEFT_SHIFT);
     }
+    delay(10);
     doUnwind();
     inMove = false;
     return;    
@@ -120,9 +121,10 @@ void sendMouse() {
       Keyboard.press(KEY_LEFT_SHIFT);
     }
     Mouse.set_buttons(0, 1, 0);
+    delay(10);
   }
 
-  auto speed = motionStartIndex == 0 ? max_mouse_speed : orbit_mouse_speed;
+  auto speed = motionStartIndex == 0 ? -max_mouse_speed : orbit_mouse_speed;
 
   int xMove = speed * normalizedAxes[motionStartIndex];
   int yMove = speed * normalizedAxes[motionStartIndex + 1];
