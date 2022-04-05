@@ -90,3 +90,21 @@ A calibration mode would be easy to add, but I don't need it yet.
 
 Likewise there's not much abstraction for additional controls or axes. There should be
 mode switching support, but I haven't implemented it yet.
+
+
+## This is not a commercial venture, and the Orbit Rat is not for sale
+
+The whole point of the project is that it's very, very cheap compared to the pro-grade
+alternative. Stocking the parts, assembling them, and shipping them takes time
+I have no interest in spending. And people have expectations of commercial products
+(warranties, returns, etc.) that I don't want to deal with. I have a job, and a
+few bucks just isn't worth the hassle.
+
+To make it worth it to me, each unit would need to sell for $100 or more. And
+that kind of defeats the purpose.
+
+On the other hand, this is also an absolutely _ideal_ first microcontroller project.
+It is within your abilities to build one. I believe in you.
+
+(In the future, I may consider selling parts or a kit. But even then I don't 
+anticipate selling completed units.)

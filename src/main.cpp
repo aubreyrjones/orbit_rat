@@ -78,7 +78,7 @@ void normalizeSticks() {
     else {
       normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]);
     }
-    normalizedAxes[i] = -normalizedAxes[i];
+    normalizedAxes[i] = -normalizedAxes[i]; // invert all channels to get normalized motion.
   }
 }
 
