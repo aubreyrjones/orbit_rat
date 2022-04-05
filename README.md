@@ -67,7 +67,7 @@ This isn't commercial hardware or software. I assume you know your way around Ar
 and that you can follow instructions about installing and using Teensyduino
 or PlatformIO (in vscode).
 
-Assuming you'l use the software mostly unmodified, you need to hook up a pair of
+Assuming you'll use the software mostly unmodified, you need to hook up a pair of
 potentiometer joysticks to the Teensy's analog inputs. That's pretty much it.
 
 For the prototype I used the model sold on SparkFun, along with their breakout boards. 
