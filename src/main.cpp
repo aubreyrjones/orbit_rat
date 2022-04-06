@@ -1,13 +1,16 @@
 #include <Arduino.h>
 #include <Keyboard.h>
+#include <Bounce2.h>
 
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 constexpr int n_axes = 4; // number of axes we're going to sample.
+constexpr int n_buttons = 2; // number of buttons
 constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
+constexpr int button_debounce_interval = 100; 
 
 // which mouse buttons are held down during each stick's motion?
 constexpr bool stick_active_buttons[][3] = {
@@ -45,8 +48,10 @@ float axisExtents[][3] = {
 // raw state sampled from analog inputs
 int axisValues[n_axes] = {0, 0, 0, 0};
 
-// are the buttons set? unset and unused right now.
-bool buttons[2] = {false, false};
+// button debouncers
+Bounce buttons[n_buttons] = {Bounce(), Bounce()};
+
+bool buttonState[n_buttons] = {false, false};
 
 // axis values in the range (-1, 1)
 float normalizedAxes[n_axes] = {0, 0, 0, 0};
@@ -82,8 +87,14 @@ void normalizeSticks() {
   }
 }
 
+// Do arduino setup.
 void setup() {
   Serial.begin(38400);
+
+  for (int i = 0; i < n_buttons; i++) {
+    buttons[i].attach(buttonPins[i], INPUT_PULLUP);
+    buttons[i].interval(button_debounce_interval);
+  }
 
   if /*constexpr*/ (calibrate_on_startup) {
     // calibrate stick centers.
@@ -143,7 +154,7 @@ bool checkDeadzone(int startIndex) {
   return abs(normalizedAxes[startIndex]) < deadzone && abs(normalizedAxes[startIndex + 1]) < deadzone;
 }
 
-void setButtons(int startIndex) {
+void setMouseButtons(int startIndex) {
   auto stickIndex = startIndex >> 1;
   Mouse.set_buttons(stick_active_buttons[stickIndex][0], stick_active_buttons[stickIndex][1], stick_active_buttons[stickIndex][2]);
 }
@@ -199,7 +210,7 @@ void sendMouse() {
     inMove = true;
     setKeys(motionStartIndex, true);
     delay(10);
-    setButtons(motionStartIndex);
+    setMouseButtons(motionStartIndex);
     delay(10); // without these delays, some programs don't register the shift or button press until after the motion has started.
   }
 
@@ -213,6 +224,19 @@ void sendMouse() {
 
   unwindAccumulator[0] += xMove;
   unwindAccumulator[1] += yMove;
+}
+
+void updateButtons() {
+  for (int i = 0; i < n_buttons; i++) {
+    buttons[i].update();
+
+    if (buttons[i].fell()) {
+      buttonState[i] = true;
+    }
+    else if (buttons[i].rose() && buttonState[i]) {
+      buttonState[i] = false;
+    }
+  }
 }
 
 void loop() {

@@ -6,7 +6,7 @@
     "description": {
         "EN": "EAGLE default 4 layer CAM job."
     },
-    "output_type": "directory",
+    "output_type": "zip",
     "outputs": [
         {
             "filename_prefix": "CAMOutputs/GerberFiles",
