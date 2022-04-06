@@ -43,16 +43,26 @@ enum class MovementMode {
   SCROLL // translate stick movements into vertical and horizontal scroll
 };
 
-constexpr float exp(float expCoef, float x) {
+constexpr float exp_entry(float expCoef, float x) {
   return pow(x, 2.71828 * expCoef);
 }
 
 using ExpoTable = std::array<float, 10>;
 
 constexpr ExpoTable makeExpoTable(float expCoef) {
-  
+  ExpoTable retval = {};
+  float step = 1.0f / (retval.size() - 1);
+  for (unsigned int i = 0; i < retval.size(); i++) {
+    retval[i] = exp_entry(expCoef, i * step);
+  }
+  return retval;
 }
 
+constexpr ExpoTable linearCurve = makeExpoTable(0);
+
+float sampleExpoCurve(ExpoTable const& curve, float pos) {
+  
+}
 
 struct StickMode {
   MovementMode move; // which movement mode?
