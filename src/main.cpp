@@ -39,17 +39,30 @@ enum class MovementMode {
   REWIND, // do a motion then unwind the cursor position
   STUTTER, // continuously move, then unwind after a certain threshold, then continue
   SIMPLE, // don't unwind at all
-  CHASE // move, then activate keyboard command, continously.
+  CHASE, // move, then activate keyboard command, continuously.
+  SCROLL // translate stick movements into vertical and horizontal scroll
 };
 
 struct StickMode {
   MovementMode move; // which movement mode?
-  int speed; // how fast to move the mouse?
+  int speedHorizontal; // how fast to move the mouse or scroll wheel?
+  int speedVertical;
   bool activeButtons[3]; // which buttons to press? left, middle, right
-  int activeKey; // which key to hold down during mouse motion
+  int activeKey = 0; // which key to hold down during mouse motion
 
   int chaseKey = 0; // key to press after each motion step to "chase"
   int chaseMods = 0; // modifiers to press along with the chase key.
+
+  float motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
+
+
+  bool hasButtons() const {
+    return activeButtons[0] || activeButtons[1] || activeButtons[2];
+  }
+
+  bool hasKey() const {
+    return activeKey;
+  }
 };
 
 constexpr int n_stick_modes = 2; // how many modes for each stick?
@@ -57,13 +70,13 @@ constexpr int n_stick_modes = 2; // how many modes for each stick?
 // Configure the modes for each stick.
 StickMode modeMap[n_axes / 2][n_stick_modes] = {
   {
-    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, 0 },
-    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 },
+    StickMode { MovementMode::REWIND, pan_speed, pan_speed, {false, true, false}, 0 },
+    StickMode { MovementMode::STUTTER, pan_speed, pan_speed, {false, true, false}, 0, 0, 0, 25 },
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::REWIND, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
-    StickMode { MovementMode::REWIND, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::SCROLL, 0, -100, {false, false, false}},
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
 };
@@ -83,17 +96,23 @@ float normalizedAxes[n_axes] = {0, 0, 0, 0};
 // forward declaration
 void doUnwind(int unwindAccumulator[2]);
 
-
+template <typename T>
+constexpr bool eitherMagAbove(T vec[2], T threshold){
+  return abs(vec[0]) >= threshold || abs(vec[1]) >= threshold;
+}
 
 // primary stick handler class
 struct StickState {
-  const int index;
-  const int xAxis, yAxis;
-  int activeStickMode = 0;
+  const int index; // which stick is this?
+  const int xAxis, yAxis; // which axes are we using?
 
-  float moveAccum[2] = {0, 0};
-  int scrollAccum = 0;
-  int unwindAccum[2] = {0, 0};
+  int activeStickMode = 0; // which mode in the mode map are we using now?
+
+  float moveAccum[2] = {0, 0}; // accumulates unsent motion, used to smooth motion and reduce errant clicks
+  int scrollAccum[2] = {0, 0}; // accumulates scrolling motion, which is converted into distinct mousewheel clicks
+  int unwindAccum[2] = {0, 0}; // accumulates _sent_ motion, used to unwind the cursor position.
+  
+  bool buttonsActivated = false; // are we currently holding down mousebuttons and keys?
 
   StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
 
@@ -106,34 +125,48 @@ struct StickState {
     return abs(x()) < deadzone && abs(y()) < deadzone;
   }
 
+  // gets the current mode
   StickMode const& mode() {
     return modeMap[index][activeStickMode];
   };
 
+  // clears all the motion accumulators.
   void clearMotion() {
     unwindAccum[0] = unwindAccum[1] = 0;
+    moveAccum[0] = moveAccum[1] = 0;
+    scrollAccum[0] = scrollAccum[1] = 0;
   }
 
+  // presses down buttons and keys prior to active motion
   void precedeActiveMotion(){
+    if (buttonsActivated) return;
+
     setKeys(true);
-    delay(10);
-    Mouse.set_buttons(mode().activeButtons[0], mode().activeButtons[1], mode().activeButtons[2]);
-    delay(10);
+    if (mode().hasButtons()) {
+      Mouse.set_buttons(mode().activeButtons[0], mode().activeButtons[1], mode().activeButtons[2]);
+      delay(10);
+    }
+    buttonsActivated = true;
   }
 
+  // releases buttons and keys after active motion
   void endActiveMotion() {
-    Mouse.set_buttons(0, 0, 0);
-    delay(10);
+    if (!buttonsActivated) return;
+
+    if (mode().hasButtons()) {
+      Mouse.set_buttons(0, 0, 0);
+      delay(10);
+    }
     setKeys(false);
-    delay(10);
-    
+    buttonsActivated = false;
   }
 
+  // call this when this stick is active and controlling the cursor.
   void activate() {
     clearMotion();
-    precedeActiveMotion();
   }
 
+  // call this when the stick is done.
   void deactivate() {
     endActiveMotion();
     switch (mode().move) {
@@ -146,28 +179,48 @@ struct StickState {
     }
   }
 
+  // stutters the mouse back to continue an active move.
   void stutterBack() {
     delay(25);
     endActiveMotion();
     unwindMotion();
-    precedeActiveMotion();
   }
 
-  void moveActiveMotion() {
-    int xMove = x() * mode().speed;
-    int yMove = y() * mode().speed;
+  // send the mouse cursor motion if it's above the motionThreshold.
+  void sendMotion() {
+    if (eitherMagAbove(moveAccum, mode().motionThreshold)) {
+      precedeActiveMotion();
+      int xMove = (int) moveAccum[0];
+      int yMove = (int) moveAccum[1];
 
-    Mouse.move(xMove, yMove);
-    unwindAccum[0] += xMove;
-    unwindAccum[1] += yMove;
+      Mouse.move(xMove, yMove);
+      unwindAccum[0] += xMove;
+      unwindAccum[1] += yMove;
+      moveAccum[0] -= xMove;
+      moveAccum[1] -= yMove;
+    }
+  }
+
+  // integrate stick and speed into the given accumulator.
+  template <typename T>
+  void accumulateMotion(T acc[2]) {
+    acc[0] += x() * mode().speedHorizontal;
+    acc[1] += y() * mode().speedVertical;
+  }
+
+  // update mouse motion from the sticks axes.
+  void moveMouseMotion() {
+    accumulateMotion(moveAccum);
+
+    sendMotion();
 
     if (mode().move == MovementMode::STUTTER) {
-      if (abs(unwindAccum[0]) > stutter_step || abs(unwindAccum[1]) > stutter_step) {
+      if (eitherMagAbove(unwindAccum, stutter_step)) {
         stutterBack();
       }
     }
     else if (mode().move == MovementMode::CHASE) {
-      if (abs(unwindAccum[0]) >= 25 || abs(unwindAccum[1]) >= 25) {
+      if (eitherMagAbove(unwindAccum, 25)) {
         Keyboard.set_modifier(mode().chaseMods);
         Keyboard.set_key1(mode().chaseKey);
         Keyboard.send_now();
@@ -181,10 +234,44 @@ struct StickState {
     }
   }
 
+  // Updates the given directional scroll, and returns +/-1 to indicate the mouse wheel should click.
+  int getDirectionScroll(int index) {
+    auto sv = scrollAccum[index];
+    auto sign = sv >= 0 ? 1 : -1;
+
+    if (abs(sv) >= 1000) {
+      scrollAccum[index] -= sign * 1000;
+      return sign;
+    }
+    return 0;
+  }
+
+  // update scrolling based on stick axes.
+  void moveScrollMotion() {
+    accumulateMotion(scrollAccum);
+    int scrollX = getDirectionScroll(0), scrollY = getDirectionScroll(1);
+    if (scrollX || scrollY) {
+      Mouse.scroll(scrollY, scrollX);
+    }
+  }
+
+  // integrated update function that handles all movement modes.
+  void moveActiveMotion() {
+    switch (mode().move){
+      case MovementMode::SCROLL:
+        moveScrollMotion();
+        break;
+      default:
+       moveMouseMotion();
+    }
+  }
+
+  // unwind sent cursor motion to return the cursor to its start position
   void unwindMotion() {
     doUnwind(unwindAccum);
   }
 
+  // hold down the mode's keys.
   void setKeys(bool press) {
     auto key = mode().activeKey;
     
@@ -196,6 +283,8 @@ struct StickState {
     else {
       Keyboard.release(key);
     }
+
+    delay(10);
   }
 };
 
@@ -239,6 +328,7 @@ void normalizeSticks() {
 void setup() {
   Serial.begin(38400);
 
+  // set up button with the Bounce library.
   for (int i = 0; i < n_buttons; i++) {
     buttons[i].attach(buttonPins[i], INPUT_PULLUP);
     buttons[i].interval(button_debounce_interval);
@@ -315,11 +405,12 @@ void sendMouse() {
   activeStick->moveActiveMotion();
 }
 
+// typedef for a button activation callback.
 using button_func = std::function<void(int)>;
 
+// basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
   //Serial.print("clicked "); Serial.println(button);
-  
   sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % n_stick_modes;
 };
 
@@ -328,6 +419,7 @@ button_func button_clicked[] = {
   advance_mode
 };
 
+// update buttons and call callbacks when they're pressed.
 void updateButtons() {
   for (int i = 0; i < n_buttons; i++) {
     buttons[i].update();
