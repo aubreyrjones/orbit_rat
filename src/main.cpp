@@ -21,7 +21,6 @@ constexpr int axisPins[] = {
 };
 
 // which pins are stick-press buttons attached to? These are Teensy DIGITAL pin numbers.
-// this is currently unused.
 constexpr int buttonPins[] = {
   16, 23
 };
@@ -35,6 +34,40 @@ float axisExtents[][3] = {
   {2, 513, 1022}
 };
 
+
+enum class MovementMode {
+  REWIND, // do a motion then unwind the cursor position
+  STUTTER, // continuously move, then unwind after a certain threshold, then continue
+  SIMPLE, // don't unwind at all
+  CHASE // move, then activate keyboard command, continously.
+};
+
+struct StickMode {
+  MovementMode move; // which movement mode?
+  int speed; // how fast to move the mouse?
+  bool activeButtons[3]; // which buttons to press? left, middle, right
+  int activeKey; // which key to hold down during mouse motion
+
+  int chaseKey = 0; // key to press after each motion step to "chase"
+  int chaseMods = 0; // modifiers to press along with the chase key.
+};
+
+constexpr int n_stick_modes = 2; // how many modes for each stick?
+
+// Configure the modes for each stick.
+StickMode modeMap[n_axes / 2][n_stick_modes] = {
+  {
+    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, 0 },
+    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 },
+    //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
+  },
+  {
+    StickMode { MovementMode::REWIND, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
+  }
+};
+
 // raw state sampled from analog inputs
 int axisValues[n_axes] = {0, 0, 0, 0};
 
@@ -46,37 +79,6 @@ bool buttonState[n_buttons] = {false, false};
 // axis values in the range (-1, 1)
 float normalizedAxes[n_axes] = {0, 0, 0, 0};
 
-enum class MovementMode {
-  REWIND,
-  STUTTER,
-  SIMPLE,
-  CHASE
-};
-
-struct StickMode {
-  MovementMode move;
-  int speed;
-  bool activeButtons[3];
-  int activeKey;
-
-  int chaseKey = 0;
-  int chaseMods = 0;
-};
-
-constexpr int n_stick_modes = 2;
-
-StickMode modeMap[n_axes / 2][n_stick_modes] = {
-  {
-    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, 0 },
-    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 },
-    //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
-  },
-  {
-    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
-    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
-    //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
-  }
-};
 
 // forward declaration
 void doUnwind(int unwindAccumulator[2]);
@@ -87,9 +89,11 @@ void doUnwind(int unwindAccumulator[2]);
 struct StickState {
   const int index;
   const int xAxis, yAxis;
-  int activeStickMode;
+  int activeStickMode = 0;
 
-  int accum[2];
+  float moveAccum[2] = {0, 0};
+  int scrollAccum = 0;
+  int unwindAccum[2] = {0, 0};
 
   StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
 
@@ -107,7 +111,7 @@ struct StickState {
   };
 
   void clearMotion() {
-    accum[0] = accum[1] = 0;
+    unwindAccum[0] = unwindAccum[1] = 0;
   }
 
   void precedeActiveMotion(){
@@ -154,16 +158,16 @@ struct StickState {
     int yMove = y() * mode().speed;
 
     Mouse.move(xMove, yMove);
-    accum[0] += xMove;
-    accum[1] += yMove;
+    unwindAccum[0] += xMove;
+    unwindAccum[1] += yMove;
 
     if (mode().move == MovementMode::STUTTER) {
-      if (abs(accum[0]) > stutter_step || abs(accum[1]) > stutter_step) {
+      if (abs(unwindAccum[0]) > stutter_step || abs(unwindAccum[1]) > stutter_step) {
         stutterBack();
       }
     }
     else if (mode().move == MovementMode::CHASE) {
-      if (abs(accum[0]) >= 25 || abs(accum[1]) >= 25) {
+      if (abs(unwindAccum[0]) >= 25 || abs(unwindAccum[1]) >= 25) {
         Keyboard.set_modifier(mode().chaseMods);
         Keyboard.set_key1(mode().chaseKey);
         Keyboard.send_now();
@@ -178,7 +182,7 @@ struct StickState {
   }
 
   void unwindMotion() {
-    doUnwind(accum);
+    doUnwind(unwindAccum);
   }
 
   void setKeys(bool press) {
