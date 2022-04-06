@@ -28,10 +28,10 @@ constexpr int buttonPins[] = {
 // calibration: low value, center, high value.
 // note that this is intentionally not `constexpr` to permit calibration.
 float axisExtents[][3] = {
-  {3, 520, 1021},
-  {6, 498, 1019},
-  {3, 530, 1021},
-  {2, 513, 1022}
+  {10, 520, 1000},
+  {10, 498, 1000},
+  {10, 530, 1000},
+  {10, 513, 1000}
 };
 
 
@@ -47,7 +47,7 @@ constexpr float exp_entry(float expCoef, float x) {
   return pow(x, 2.71828 * expCoef);
 }
 
-using ExpoTable = std::array<float, 10>;
+using ExpoTable = std::array<float, 40>;
 
 constexpr ExpoTable makeExpoTable(float expCoef) {
   ExpoTable retval = {};
@@ -58,10 +58,15 @@ constexpr ExpoTable makeExpoTable(float expCoef) {
   return retval;
 }
 
-constexpr ExpoTable linearCurve = makeExpoTable(0);
+constexpr ExpoTable linearCurve = makeExpoTable(0.4);
 
 float sampleExpoCurve(ExpoTable const& curve, float pos) {
-  
+  int point = abs(pos * (curve.size() - 1));
+  auto sign = pos >= 0 ? 1 : -1;
+  Serial.print(point);
+  Serial.print(",");
+  Serial.println(curve[point] * sign);
+  return curve[point] * sign;
 }
 
 struct StickMode {
@@ -70,6 +75,8 @@ struct StickMode {
   int speedVertical;
   bool activeButtons[3]; // which buttons to press? left, middle, right
   int activeKey = 0; // which key to hold down during mouse motion
+
+  ExpoTable const& curve = linearCurve;
 
   int chaseKey = 0; // key to press after each motion step to "chase"
   int chaseMods = 0; // modifiers to press along with the chase key.
@@ -92,7 +99,7 @@ constexpr int n_stick_modes = 2; // how many modes for each stick?
 StickMode modeMap[n_axes / 2][n_stick_modes] = {
   {
     StickMode { MovementMode::REWIND, pan_speed, pan_speed, {false, true, false}, 0 },
-    StickMode { MovementMode::STUTTER, pan_speed, pan_speed, {false, true, false}, 0, 0, 0, 25 },
+    StickMode { MovementMode::STUTTER, pan_speed, pan_speed, {false, true, false}, 0, linearCurve, 0, 0, 25 },
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
@@ -225,8 +232,9 @@ struct StickState {
   // integrate stick and speed into the given accumulator.
   template <typename T>
   void accumulateMotion(T acc[2]) {
-    acc[0] += x() * mode().speedHorizontal;
-    acc[1] += y() * mode().speedVertical;
+    auto const& curve = mode().curve;
+    acc[0] += sampleExpoCurve(curve, x()) * mode().speedHorizontal;
+    acc[1] += sampleExpoCurve(curve, y()) * mode().speedVertical;
   }
 
   // update mouse motion from the sticks axes.
@@ -336,9 +344,15 @@ unsigned int to_joy(float val) {
 void normalizeSticks() {
   for (int i = 0; i < n_axes; i++) {
     if (axisValues[i] < axisExtents[i][1]) {
+      if (axisValues[i] < axisExtents[i][0]) {
+        axisValues[i] = axisExtents[i][0];
+      }
       normalizedAxes[i] = -(1 - normalize(axisExtents[i][0], axisValues[i], axisExtents[i][1]));
     }
     else {
+      if (axisValues[i] > axisExtents[i][2]) {
+        axisValues[i] = axisExtents[i][2];
+      }
       normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]);
     }
     normalizedAxes[i] = -normalizedAxes[i]; // invert all channels to get normalized motion.
