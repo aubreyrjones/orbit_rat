@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Keyboard.h>
 #include <Bounce2.h>
+#include <functional>
 
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
@@ -10,7 +11,7 @@ constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negativ
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
-constexpr int button_debounce_interval = 100; 
+constexpr int button_debounce_interval = 25; 
 
 // which mouse buttons are held down during each stick's motion?
 constexpr bool stick_active_buttons[][3] = {
@@ -24,16 +25,16 @@ constexpr int stick_active_key[] = {
   KEY_LEFT_SHIFT
 };
 
-// Which pin goes to which axis?
+// Which pin goes to which axis? These are Teensy ANALOG pin numbers.
 // pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
 constexpr int axisPins[] = {
   1, 0, 8, 7
 };
 
-// which pins are stick-press buttons attached to?
+// which pins are stick-press buttons attached to? These are Teensy DIGITAL pin numbers.
 // this is currently unused.
 constexpr int buttonPins[] = {
-  2, 9
+  16, 23
 };
 
 // calibration: low value, center, high value.
@@ -55,6 +56,48 @@ bool buttonState[n_buttons] = {false, false};
 
 // axis values in the range (-1, 1)
 float normalizedAxes[n_axes] = {0, 0, 0, 0};
+
+enum class MovementMode {
+  REWIND,
+  STUTTER,
+  SIMPLE
+};
+
+struct StickMode {
+  MovementMode move;
+  int speed;
+  bool activeButtons[3];
+  int activeKey;
+};
+
+constexpr int n_stick_modes = 2;
+
+StickMode modeMap[n_stick_modes][n_axes / 2] = {
+  {
+    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, 0 },
+    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 }
+  },
+  {
+    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
+  }
+};
+
+struct StickState {
+  const int index;
+  const int xAxis, yAxis;
+  int activeStickMode;
+
+  StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
+
+  float x() const { return normalizedAxes[xAxis]; }
+  float y() const { return normalizedAxes[yAxis]; }
+};
+
+StickState sticks[n_axes / 2] = {
+  StickState(0),
+  StickState(1)
+};
 
 // read the analog sticks.
 void readSticks() {
@@ -226,12 +269,26 @@ void sendMouse() {
   unwindAccumulator[1] += yMove;
 }
 
+using button_func = std::function<void(int)>;
+
+void advance_mode(int button) {
+  Serial.print("clicked "); Serial.println(button);
+  
+  sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % n_stick_modes;
+};
+
+button_func button_clicked[] = {
+  advance_mode,
+  advance_mode
+};
+
 void updateButtons() {
   for (int i = 0; i < n_buttons; i++) {
     buttons[i].update();
 
     if (buttons[i].fell()) {
       buttonState[i] = true;
+      button_clicked[i](i);
     }
     else if (buttons[i].rose() && buttonState[i]) {
       buttonState[i] = false;
@@ -242,6 +299,7 @@ void updateButtons() {
 void loop() {
   readSticks();
   normalizeSticks();
+  updateButtons();
 
   if /*constexpr*/ (send_joystick_hid) { 
     sendJoystick();
