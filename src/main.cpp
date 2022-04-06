@@ -450,7 +450,7 @@ void loop() {
   normalizeSticks();
   updateButtons();
 
-  if /*constexpr*/ (send_joystick_hid) { 
+  if constexpr (send_joystick_hid) { 
     sendJoystick();
   }
 
