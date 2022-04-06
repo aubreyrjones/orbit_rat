@@ -43,6 +43,17 @@ enum class MovementMode {
   SCROLL // translate stick movements into vertical and horizontal scroll
 };
 
+constexpr float exp(float expCoef, float x) {
+  return pow(x, 2.71828 * expCoef);
+}
+
+using ExpoTable = std::array<float, 10>;
+
+constexpr ExpoTable makeExpoTable(float expCoef) {
+  
+}
+
+
 struct StickMode {
   MovementMode move; // which movement mode?
   int speedHorizontal; // how fast to move the mouse or scroll wheel?
@@ -75,8 +86,8 @@ StickMode modeMap[n_axes / 2][n_stick_modes] = {
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     StickMode { MovementMode::SCROLL, 0, -100, {false, false, false}},
+    StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
 };
