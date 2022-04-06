@@ -5,11 +5,12 @@
 
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
+constexpr bool autocal = true; // attempt to automatically calibrate during use. Makes things a little weird at startup.
 constexpr int n_axes = 4; // number of axes we're going to sample.
 constexpr int n_buttons = 2; // number of buttons
 constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
-constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
+constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 constexpr int stutter_step = 1000;
 constexpr int button_debounce_interval = 25; 
@@ -59,13 +60,11 @@ constexpr ExpoTable makeExpoTable(float expCoef) {
 }
 
 constexpr ExpoTable linearCurve = makeExpoTable(0.4);
+constexpr ExpoTable deepCurve = makeExpoTable(0.85);
 
 float sampleExpoCurve(ExpoTable const& curve, float pos) {
   int point = abs(pos * (curve.size() - 1));
   auto sign = pos >= 0 ? 1 : -1;
-  Serial.print(point);
-  Serial.print(",");
-  Serial.println(curve[point] * sign);
   return curve[point] * sign;
 }
 
@@ -103,7 +102,7 @@ StickMode modeMap[n_axes / 2][n_stick_modes] = {
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::SCROLL, 0, -100, {false, false, false}},
+    StickMode { MovementMode::SCROLL, 0, -2000, {false, false, false}, 0, deepCurve},
     StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
@@ -192,6 +191,10 @@ struct StickState {
   // call this when this stick is active and controlling the cursor.
   void activate() {
     clearMotion();
+
+    if (mode().move == MovementMode::SCROLL) {
+      
+    }
   }
 
   // call this when the stick is done.
@@ -268,16 +271,26 @@ struct StickState {
     auto sv = scrollAccum[index];
     auto sign = sv >= 0 ? 1 : -1;
 
-    if (abs(sv) >= 1000) {
-      scrollAccum[index] -= sign * 1000;
+    if (abs(sv) >= 10000) {
+      scrollAccum[index] -= sign * 10000;
       return sign;
     }
     return 0;
   }
 
   // update scrolling based on stick axes.
-  void moveScrollMotion() {
+  void moveScrollMotion(bool firstMove) {
     accumulateMotion(scrollAccum);
+    if (firstMove) {
+      for (int & s : scrollAccum) {
+        if (s < 0) {
+          s = -10000;
+        }
+        else if (s > 0) {
+          s = 10000;
+        }
+      }
+    }
     int scrollX = getDirectionScroll(0), scrollY = getDirectionScroll(1);
     if (scrollX || scrollY) {
       Mouse.scroll(scrollY, scrollX);
@@ -285,14 +298,15 @@ struct StickState {
   }
 
   // integrated update function that handles all movement modes.
-  void moveActiveMotion() {
+  void moveActiveMotion(bool firstMove = false) {
     switch (mode().move){
       case MovementMode::SCROLL:
-        moveScrollMotion();
+        moveScrollMotion(firstMove);
         break;
       default:
        moveMouseMotion();
     }
+    delay(10);
   }
 
   // unwind sent cursor motion to return the cursor to its start position
@@ -325,7 +339,15 @@ StickState sticks[n_axes / 2] = {
 // read the analog sticks.
 void readSticks() {
   for (int i = 0; i < n_axes; i++) {
-    axisValues[i] = analogRead(axisPins[i]);
+    auto val = axisValues[i] = analogRead(axisPins[i]);
+    if constexpr (autocal) {
+      if (val < axisExtents[i][0]) {
+        axisExtents[i][0] = val;
+      }
+      else if (val > axisExtents[i][2]) {
+        axisExtents[i][2] = val;
+      }
+    }
   }
 }
 
@@ -435,9 +457,11 @@ void sendMouse() {
     
     start_move:
     activeStick->activate();
+    activeStick->moveActiveMotion(true);
   }
-
-  activeStick->moveActiveMotion();
+  else {
+    activeStick->moveActiveMotion(false);
+  }
 }
 
 // typedef for a button activation callback.
@@ -479,8 +503,6 @@ void loop() {
   }
 
   sendMouse();
-
-  delay(10); // approximately 100 updates a second. It's actually less because of delays elsewhere, but it's plenty fast for CAD or whatever.
 
   // temporarily uncomment this block to get values printed out to serial for calibration purposes.
   // Serial.print("axes ");
