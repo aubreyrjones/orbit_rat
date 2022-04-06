@@ -11,19 +11,8 @@ constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negativ
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.02; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
+constexpr int stutter_step = 1000;
 constexpr int button_debounce_interval = 25; 
-
-// which mouse buttons are held down during each stick's motion?
-constexpr bool stick_active_buttons[][3] = {
-  {false, true, false},
-  {false, true, false}
-};
-
-// which keyboard key is held down during each stick's motion? 0 for no keys.
-constexpr int stick_active_key[] = {
-  0,
-  KEY_LEFT_SHIFT
-};
 
 // Which pin goes to which axis? These are Teensy ANALOG pin numbers.
 // pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
@@ -60,7 +49,8 @@ float normalizedAxes[n_axes] = {0, 0, 0, 0};
 enum class MovementMode {
   REWIND,
   STUTTER,
-  SIMPLE
+  SIMPLE,
+  CHASE
 };
 
 struct StickMode {
@@ -68,30 +58,141 @@ struct StickMode {
   int speed;
   bool activeButtons[3];
   int activeKey;
+
+  int chaseKey = 0;
+  int chaseMods = 0;
 };
 
 constexpr int n_stick_modes = 2;
 
-StickMode modeMap[n_stick_modes][n_axes / 2] = {
+StickMode modeMap[n_axes / 2][n_stick_modes] = {
   {
     StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, 0 },
-    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 }
+    StickMode { MovementMode::STUTTER, pan_speed, {false, true, false}, 0 },
+    //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
     StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
     StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
 };
 
+// forward declaration
+void doUnwind(int unwindAccumulator[2]);
+
+
+
+// primary stick handler class
 struct StickState {
   const int index;
   const int xAxis, yAxis;
   int activeStickMode;
 
+  int accum[2];
+
   StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
 
   float x() const { return normalizedAxes[xAxis]; }
   float y() const { return normalizedAxes[yAxis]; }
+
+
+  // Checks whether the stick is in the deadzone.
+  bool checkDeadzone() {
+    return abs(x()) < deadzone && abs(y()) < deadzone;
+  }
+
+  StickMode const& mode() {
+    return modeMap[index][activeStickMode];
+  };
+
+  void clearMotion() {
+    accum[0] = accum[1] = 0;
+  }
+
+  void precedeActiveMotion(){
+    setKeys(true);
+    delay(10);
+    Mouse.set_buttons(mode().activeButtons[0], mode().activeButtons[1], mode().activeButtons[2]);
+    delay(10);
+  }
+
+  void endActiveMotion() {
+    Mouse.set_buttons(0, 0, 0);
+    delay(10);
+    setKeys(false);
+    delay(10);
+    
+  }
+
+  void activate() {
+    clearMotion();
+    precedeActiveMotion();
+  }
+
+  void deactivate() {
+    endActiveMotion();
+    switch (mode().move) {
+      case MovementMode::REWIND:
+      case MovementMode::STUTTER:
+        unwindMotion();
+        break;
+      default:
+        break;
+    }
+  }
+
+  void stutterBack() {
+    delay(25);
+    endActiveMotion();
+    unwindMotion();
+    precedeActiveMotion();
+  }
+
+  void moveActiveMotion() {
+    int xMove = x() * mode().speed;
+    int yMove = y() * mode().speed;
+
+    Mouse.move(xMove, yMove);
+    accum[0] += xMove;
+    accum[1] += yMove;
+
+    if (mode().move == MovementMode::STUTTER) {
+      if (abs(accum[0]) > stutter_step || abs(accum[1]) > stutter_step) {
+        stutterBack();
+      }
+    }
+    else if (mode().move == MovementMode::CHASE) {
+      if (abs(accum[0]) >= 25 || abs(accum[1]) >= 25) {
+        Keyboard.set_modifier(mode().chaseMods);
+        Keyboard.set_key1(mode().chaseKey);
+        Keyboard.send_now();
+
+        Keyboard.set_key1(0);
+        Keyboard.set_modifier(0);
+        Keyboard.send_now();
+        
+        stutterBack();
+      }
+    }
+  }
+
+  void unwindMotion() {
+    doUnwind(accum);
+  }
+
+  void setKeys(bool press) {
+    auto key = mode().activeKey;
+    
+    if (!key) return;
+
+    if (press) {
+      Keyboard.press(key);
+    }
+    else {
+      Keyboard.release(key);
+    }
+  }
 };
 
 StickState sticks[n_axes / 2] = {
@@ -156,12 +257,6 @@ void sendJoystick() {
   Joystick.Zrotate(to_joy(normalizedAxes[2]));
 }
 
-// stores how much we've offset the mouse cursor during a motion
-int unwindAccumulator[2];
-
-// are we currently in a move?
-bool inMove = false;
-
 // When we unwind the mouse motion, find the largest step we can move
 // to reduce the given accumulator. This is necessary because the
 // teensy HID system only spec's mouse moves between -127 and 127.
@@ -177,7 +272,7 @@ int max_step(int const& accum) {
 }
 
 // Move the mouse back to its start point.
-void doUnwind() {
+void doUnwind(int unwindAccumulator[2]) {
   while (unwindAccumulator[0] != 0 || unwindAccumulator[1] != 0) {
     int xMove = max_step(unwindAccumulator[0]);
     int yMove = max_step(unwindAccumulator[1]);
@@ -188,91 +283,38 @@ void doUnwind() {
   }
 }
 
-// tracks which stick started a motion
-int motionStartIndex = -1;
-
-// Checks whether the given stick (represented by axes startIndex and startIndex+1) is
-// in its deadzone.
-bool checkDeadzone(int startIndex) {
-  return abs(normalizedAxes[startIndex]) < deadzone && abs(normalizedAxes[startIndex + 1]) < deadzone;
-}
-
-void setMouseButtons(int startIndex) {
-  auto stickIndex = startIndex >> 1;
-  Mouse.set_buttons(stick_active_buttons[stickIndex][0], stick_active_buttons[stickIndex][1], stick_active_buttons[stickIndex][2]);
-}
-
-void setKeys(int startIndex, bool press) {
-  auto stickIndex = startIndex >> 1;
-  auto key = stick_active_key[stickIndex];
-  
-  if (!key) return;
-
-  if (press) {
-    Keyboard.press(key);
-  }
-  else {
-    Keyboard.release(key);
-  }
-}
+StickState *activeStick = nullptr;
 
 // Update mouse motion state and send HID reports.
 void sendMouse() {
 
   // are we in a move that has now stopped?
-  if (inMove && checkDeadzone(motionStartIndex)) {
-    Mouse.set_buttons(0, 0, 0);
-    setKeys(motionStartIndex, false);
-    delay(10); // without this delay, the mouse button release may not be registered before the unwind...
-    doUnwind(); // ...which would have the effect of undoing the pan/zoom we just completed instead of just resetting the cursor.
-    inMove = false;
+  if (activeStick && activeStick->checkDeadzone()) {
+    activeStick->deactivate();
+    activeStick = nullptr;
     return;    
   }
 
-  // if we're not in a move, maybe we should start one?
-  if (!inMove) {
-    // are either of the sticks outside their deadzone?
-    // btw, having this check inside the !inMove block
-    // has the effect of "muting" any movement from the
-    // other stick once one stick starts a move. 
-    // We only listen to motionStartIndex stick until 
-    // we start a new move.
-    if (!checkDeadzone(0)) {
-      motionStartIndex = 0;
+  if (!activeStick) {
+    for (StickState & stick : sticks) {
+      if (!stick.checkDeadzone()) {
+        activeStick = &stick;
+        goto start_move;
+      }
     }
-    else if (!checkDeadzone(2)) {
-      motionStartIndex = 2;
-    }
-    else {
-      // if everything is in deadzones, just stop.
-      return;
-    }
-
-    // we're outside the deadzone, so start a new move.
-    unwindAccumulator[0] = unwindAccumulator[1] = 0;
-    inMove = true;
-    setKeys(motionStartIndex, true);
-    delay(10);
-    setMouseButtons(motionStartIndex);
-    delay(10); // without these delays, some programs don't register the shift or button press until after the motion has started.
+    return; // skipped by goto if we have a live stick
+    
+    start_move:
+    activeStick->activate();
   }
 
-  // choose the speed based on which stick initiated the move.
-  auto speed = motionStartIndex == 0 ? pan_speed : orbit_speed;
-
-  int xMove = speed * normalizedAxes[motionStartIndex];
-  int yMove = speed * normalizedAxes[motionStartIndex + 1];
-
-  Mouse.move(xMove, yMove);
-
-  unwindAccumulator[0] += xMove;
-  unwindAccumulator[1] += yMove;
+  activeStick->moveActiveMotion();
 }
 
 using button_func = std::function<void(int)>;
 
 void advance_mode(int button) {
-  Serial.print("clicked "); Serial.println(button);
+  //Serial.print("clicked "); Serial.println(button);
   
   sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % n_stick_modes;
 };
