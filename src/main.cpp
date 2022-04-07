@@ -22,11 +22,11 @@ constexpr auto zoomScrollCurve = make_curve(1400, 0.8); // note that scroll spee
 // note the fancy named initializer list thingie. Note that even if there are gaps, fields must be referenced
 // in the order they're defined. Check `config_types.hpp` for details.
 constexpr auto stickModes = declare_mode_map(
-  std::array {
+  std::array { // stick 0
     StickMode { MovementMode::REWIND, panCurve, {false, true, false} },
     StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 }
   },
-  std::array {
+  std::array { // stick 1
     StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = 0},
     StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT }
   }
