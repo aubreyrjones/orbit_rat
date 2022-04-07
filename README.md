@@ -53,22 +53,40 @@ The other stick works very similarly, but also emulates holding down the left sh
 This will activate an orbit in CAD software.
 
 This is almost as much control as a dedicated "3d mouse" with special driver support. The beauty of 
-Orbit Rat is that it works everywhere, in any operating system, in any application that uses middle 
-mouse for pan.
+Orbit Rat is that it works everywhere, in any operating system, in any application that uses click 
+and drag for pan.
 
-The only requirement is that for the Teensy mouse specifically, you must set the acceleration to 0 in your
-system settings. If you don't, the cursor will not return to the correct location. You should be able
-to leave acceleration on for your regular mouse however you like it.
+It can also do other stuff, like sending scroll wheel events and keyboard keys... but the rewind
+operation is what it does uniquely.
+
+
+# Limitations
+
+The Orbit Rat is fundamentally impersonating a mouse, so it doesn't have access to any
+information a regular dumb mouse wouldn't have. It doesn't get any feedback from the 
+operating system.
+
+The main place this shows up is when the cursor hits the edge of the screen during a move.
+The Orbit Rat thinks it's still moving the cursor, but the OS doesn't let it leave the screen.
+When the OR goes to rewind the cursor motion at the end of the move, it has the wrong
+idea of how much to rewind and overshoots.
+
+Additionally, moue wheel scrolling in Linux and Windows is _not_ smooth. It goes in
+chunky, discrete increments. Orbit Rat tries its best to send scroll events at a steady
+rate, but without special drivers, it can't make the screen animation smooth when
+scrolling (like e.g. Apple trackpad scrolling).
+
 
 # Configuration and Building
 
+Since you need the tools to upload the firmware anyway, I made things easy for me.
 Orbit Rat is configured in source code and built with [PlatformIO](https://platformio.org/).
 
 The easiest way to use PlatformIO is just to use VisualStudio Code (not Visual Studio) with
 the free PlatformIO plugin from the marketplace. Standalone setups may work but I haven't
 tested them.
 
-When you first build, it may seem to stall for a very long time. It's downloading a newer
+When you first build, it may seem to stall for a very long time. PlatformIO is downloading a newer
 compiler from a very slow connection. It gives no progress indicator. It seriously
 took me 20 minutes to download. This only happens the first time you build. It also
 may finish the download, try to compile, then say it failed... try again before
@@ -77,22 +95,32 @@ concluding it doesn't work.
 Configuration is at the top of `main.cpp`. You can learn more about the options in 
 `config_types.hpp`.
 
-# Hardware
+On your operation system you will need to set the "Teensyduino OrbitRat Mouse" acceleration
+to 0. If you don't, the cursor will not return to the correct location. You should be able
+to leave acceleration on for your regular mouse however you like it.
 
-This isn't commercial hardware or software. I assume you know your way around Arduino
-and that you can google and follow instructions about installing and using 
-PlatformIO (in vscode).
+## Hardware
+
+This isn't commercial hardware or software. You'll need to cobble together your
+own hardware setup.
+
+I'm using a Teensy LC as my microcontroller. I expect Teensy 4.0 would work, but
+little is gained from its expanded capabilities. Teensy 3 might work; Teensy 2
+is not compatible.
 
 Assuming you'll use the software mostly unmodified, you need to hook up a pair of
 potentiometer joysticks to the Teensy's analog inputs. That's pretty much it.
 
-For the prototype I used the model sold on SparkFun, along with their breakout boards. 
+For the prototype I used the model of joystick sold on SparkFun, along with their 
+breakout boards. I wired up the axes directly to the Teensy LC analog pins. I added 
+pullup resistors on the switches There are internal pullups that could work, but I 
+didn't test that way.
 
-I wired up the axes directly to the Teensy LC analog pins. I added pullup resistors on the switches
-There are internal pullups that could work, but I didn't test that way.
+You can see my pin assignments in `main.cpp` under `axisPins` and `buttonPins`.
+That's also where you can alter them if you'd like to wire the pins up differently.
+Note that you _must_ use analog inputs for the joysticks.
 
-
-# Software
+## Software
 
 The software isn't written to be especially efficient. It's written for a Teensy LC,
 which has a 48MHz core clock. I haven't noticed that input rates are too low, so
@@ -100,8 +128,8 @@ I don't worry about a bit of fake floating point.
 
 Calibration is quasi-automatic right now (although you can turn it off). By default, 
 the center point is read at startup. Conservative endpoints are taken as a default,
-but will expand if they receive a higher value from the hardware. You can turn
-off both these features at the top of `main.cpp`.
+but will expand if they receive a higher value from the hardware during operation. You 
+can turn off both these features at the top of `main.cpp`.
 
 ## This is not a commercial venture, and the Orbit Rat is not for sale
 
@@ -115,7 +143,10 @@ To make it worth it to me, each unit would need to sell for $100 or more. And
 that kind of defeats the purpose.
 
 On the other hand, this is also an absolutely _ideal_ first microcontroller project.
-It is within your abilities to build one. I believe in you.
+You can build a completely decent version using just breakout- and bread-boards.
+It is within your abilities to Orbit Rat. I believe in you.
 
-(In the future, I may consider selling parts or a kit. But even then I don't 
-anticipate selling completed units.)
+You can also try one of the circuit boards from the `circuits` directory.
+Most of those designs aren't tested, but they're a good starting point for
+your design. When I get a design printed and tested, I will mark it 
+conspicuously.
