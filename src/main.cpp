@@ -6,8 +6,8 @@
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
 constexpr bool autocal = true; // attempt to automatically calibrate during use. Makes things a little weird at startup.
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
-constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
-constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
+constexpr int pan_speed = 25; // max speed of pan motion (first stick). Negative to invert motion.
+constexpr int orbit_speed = 10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 constexpr int stutter_step = 1000;
@@ -30,14 +30,14 @@ constexpr int buttonPins[] = {
 
 // calibration: low value, center, high value.
 // note that this is intentionally not `constexpr` to permit calibration.
-float axisExtents[][3] = {
+int16_t axisExtents[][3] = {
   {10, 520, 1015},
   {10, 498, 1015},
   {10, 530, 1015},
   {10, 513, 1015}
 };
 
-// Defines how the stick will move the mouse, scroll wheel, etc.
+// Options for how the stick will move the mouse, scroll wheel, etc.
 enum class MovementMode {
   REWIND, // do a motion then unwind the cursor position
   STUTTER, // continuously move, then unwind after a certain threshold, then continue
@@ -52,7 +52,7 @@ constexpr float exp_entry(float expCoef, float x, float scale = 1.0f) {
 }
 
 // A curve used to interpolate stick positions.
-using ExpoTable = std::array<float, 10>;
+using ExpoTable = std::array<short, 10>;
 
 // build a curve of the form `scale * x^(e*expCoef)`.
 constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
@@ -64,26 +64,21 @@ constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
   return retval;
 }
 
-// a basically-linear curve.
-constexpr ExpoTable linearCurve = makeExpoTable(0.4);
-
-// a curve with a pronounced "exponential" dip
-constexpr ExpoTable deepCurve = makeExpoTable(0.85);
-
 
 struct StickMode {
   MovementMode move; // which movement mode?
-  int speedHorizontal; // how fast to move the mouse or scroll wheel?
-  int speedVertical;
+  ExpoTable curve; // how fast and on what curve to move the mouse or wheel?
   bool activeButtons[3]; // which buttons to press? left, middle, right
-  int activeKey = 0; // which key to hold down during mouse motion
 
-  ExpoTable curve = linearCurve;
+  int activeKey = 0; // which key to hold down during mouse motion
+  
+  int8_t horDir = -1; // set positive or inverted motion, or 0 for null axis.
+  int8_t vertDir = -1; // same as horDir.
 
   int chaseKey = 0; // key to press after each motion step to "chase"
   int chaseMods = 0; // modifiers to press along with the chase key.
 
-  float motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
+  int motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
 
 
   bool hasButtons() const {
@@ -100,13 +95,13 @@ constexpr int n_stick_modes = 2; // how many modes for each stick?
 // Configure the modes for each stick.
 StickMode modeMap[n_axes / 2][n_stick_modes] = {
   {
-    StickMode { MovementMode::REWIND, pan_speed, pan_speed, {false, true, false}, 0 },
-    StickMode { MovementMode::STUTTER, pan_speed, pan_speed, {false, true, false}, 0, linearCurve, 0, 0, 25 },
+    StickMode { MovementMode::REWIND, makeExpoTable(0.4, pan_speed), {false, true, false} },
+    StickMode { MovementMode::STUTTER, makeExpoTable(0.4, pan_speed), {false, true, false}, 0, -1, -1, 0, 0, 25 },
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::SCROLL, 0, -1, {false, false, false}, 0, makeExpoTable(0.8, 1400.0f)},
-    StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::SCROLL, makeExpoTable(0.8, 1400.0f), {false, false, false}, 0, 0, -1}, 
+    StickMode { MovementMode::REWIND, makeExpoTable(0.4, orbit_speed), {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
 };
@@ -132,7 +127,7 @@ constexpr bool eitherMagAbove(T vec[2], T threshold){
 }
 
 // sample a curve from a stick position and return the value.
-float sampleExpoCurve(ExpoTable const& curve, float pos) {
+short sampleExpoCurve(ExpoTable const& curve, float pos) {
   int point = abs(pos * (curve.size() - 1));
   auto sign = pos >= 0 ? 1 : -1;
   return curve[point] * sign;
@@ -146,7 +141,7 @@ struct StickState {
 
   int activeStickMode = 0; // which mode in the mode map are we using now?
 
-  float moveAccum[2] = {0, 0}; // accumulates unsent motion, used to smooth motion and reduce errant clicks
+  int moveAccum[2] = {0, 0}; // accumulates unsent motion, used to smooth motion and reduce errant clicks
   int scrollAccum[2] = {0, 0}; // accumulates scrolling motion, which is converted into distinct mousewheel clicks
   int unwindAccum[2] = {0, 0}; // accumulates _sent_ motion, used to unwind the cursor position.
   
@@ -243,8 +238,8 @@ struct StickState {
   template <typename T>
   void accumulateMotion(T acc[2]) {
     auto const& curve = mode().curve;
-    acc[0] += sampleExpoCurve(curve, x()) * mode().speedHorizontal;
-    acc[1] += sampleExpoCurve(curve, y()) * mode().speedVertical;
+    acc[0] += sampleExpoCurve(curve, x()) * mode().horDir;
+    acc[1] += sampleExpoCurve(curve, y()) * mode().vertDir;
   }
 
   // update mouse motion from the sticks axes.
