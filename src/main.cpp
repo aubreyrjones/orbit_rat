@@ -4,16 +4,18 @@
 #include <functional>
 
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
-constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 constexpr bool autocal = true; // attempt to automatically calibrate during use. Makes things a little weird at startup.
-constexpr int n_axes = 4; // number of axes we're going to sample.
-constexpr int n_buttons = 2; // number of buttons
+constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 constexpr int pan_speed = -25; // max speed of pan motion (first stick). Negative to invert motion.
 constexpr int orbit_speed = -10; // max speed of orbit motion (second stick)
 constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 constexpr int stutter_step = 1000;
-constexpr int button_debounce_interval = 25; 
+constexpr int button_debounce_interval = 25;
+
+// theoretically configurable, but you'd need different hardware.
+constexpr int n_axes = 4; // number of axes we're going to sample. Every pair of axes is probably a "stick".
+constexpr int n_buttons = 2; // number of buttons
 
 // Which pin goes to which axis? These are Teensy ANALOG pin numbers.
 // pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
@@ -35,7 +37,7 @@ float axisExtents[][3] = {
   {10, 513, 1015}
 };
 
-
+// Defines how the stick will move the mouse, scroll wheel, etc.
 enum class MovementMode {
   REWIND, // do a motion then unwind the cursor position
   STUTTER, // continuously move, then unwind after a certain threshold, then continue
@@ -44,12 +46,15 @@ enum class MovementMode {
   SCROLL // translate stick movements into vertical and horizontal scroll
 };
 
+// defines a stick curve entry
 constexpr float exp_entry(float expCoef, float x, float scale = 1.0f) {
   return scale * pow(x, 2.71828 * expCoef);
 }
 
+// A curve used to interpolate stick positions.
 using ExpoTable = std::array<float, 10>;
 
+// build a curve of the form `scale * x^(e*expCoef)`.
 constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
   ExpoTable retval = {};
   float step = 1.0f / (retval.size() - 1);
@@ -59,14 +64,12 @@ constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
   return retval;
 }
 
+// a basically-linear curve.
 constexpr ExpoTable linearCurve = makeExpoTable(0.4);
+
+// a curve with a pronounced "exponential" dip
 constexpr ExpoTable deepCurve = makeExpoTable(0.85);
 
-float sampleExpoCurve(ExpoTable const& curve, float pos) {
-  int point = abs(pos * (curve.size() - 1));
-  auto sign = pos >= 0 ? 1 : -1;
-  return curve[point] * sign;
-}
 
 struct StickMode {
   MovementMode move; // which movement mode?
@@ -102,7 +105,7 @@ StickMode modeMap[n_axes / 2][n_stick_modes] = {
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::SCROLL, 0, -1, {false, false, false}, 0, makeExpoTable(0.4, 1400.0f)}, //linearCurve},
+    StickMode { MovementMode::SCROLL, 0, -1, {false, false, false}, 0, makeExpoTable(0.8, 1400.0f)},
     StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
@@ -127,6 +130,14 @@ template <typename T>
 constexpr bool eitherMagAbove(T vec[2], T threshold){
   return abs(vec[0]) >= threshold || abs(vec[1]) >= threshold;
 }
+
+// sample a curve from a stick position and return the value.
+float sampleExpoCurve(ExpoTable const& curve, float pos) {
+  int point = abs(pos * (curve.size() - 1));
+  auto sign = pos >= 0 ? 1 : -1;
+  return curve[point] * sign;
+}
+
 
 // primary stick handler class
 struct StickState {
@@ -262,13 +273,16 @@ struct StickState {
     }
   }
 
+  // the scroll accumulator has to get this magnitude to trigger a scroll wheel click
+  static constexpr int scroll_saturate = 10000;
+
   // Updates the given directional scroll, and returns +/-1 to indicate the mouse wheel should click.
   int getDirectionScroll(int index) {
     auto sv = scrollAccum[index];
     auto sign = sv >= 0 ? 1 : -1;
 
-    if (abs(sv) >= 10000) {
-      scrollAccum[index] -= sign * 10000;
+    if (abs(sv) >= scroll_saturate) {
+      scrollAccum[index] -= sign * scroll_saturate;
       return sign;
     }
     return 0;
@@ -280,10 +294,10 @@ struct StickState {
     if (firstMove) { // force a move on the first step
       for (int & s : scrollAccum) {
         if (s < 0) {
-          s += -10000;
+          s += -scroll_saturate;
         }
         else if (s > 0) {
-          s += 10000;
+          s += scroll_saturate;
         }
       }
     }
@@ -336,6 +350,7 @@ StickState sticks[n_axes / 2] = {
 void readSticks() {
   for (int i = 0; i < n_axes; i++) {
     auto val = axisValues[i] = analogRead(axisPins[i]);
+
     if constexpr (autocal) {
       if (val < axisExtents[i][0]) {
         axisExtents[i][0] = val;

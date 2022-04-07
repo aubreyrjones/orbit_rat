@@ -72,9 +72,8 @@ potentiometer joysticks to the Teensy's analog inputs. That's pretty much it.
 
 For the prototype I used the model sold on SparkFun, along with their breakout boards. 
 
-I wired up the axes directly to the Teensy LC analog pins. I added pullup resistors on the switches, 
-but the code doesn't currently use (or even read) the switches. And there are internal
-pullups that should be fine.
+I wired up the axes directly to the Teensy LC analog pins. I added pullup resistors on the switches
+There are internal pullups that could work fine, but I didn't test that way.
 
 You can calibrate the sticks by adjusting the `axisExtents` variable. There are also 
 variables near that for controlling the motion speed.
@@ -83,14 +82,17 @@ variables near that for controlling the motion speed.
 # Software
 
 The software isn't written to be especially efficient. It's written for a Teensy LC,
-which has a 48MHz core clock. So I indulge in some emulated floating point.
+which has a 48MHz core clock. I haven't noticed that input rates are too low, so
+I freely indulge in emulated floating point.
 
-Aside from startup center-point reads, calibration is manual right now, which is less than ideal. 
-A calibration mode would be easy to add, but I don't need it yet.
+Calibration is quasi-automatic right now (although you can turn it off). By default, 
+the center point is read at startup. Conservative endpoints are taken as a default,
+but will expand if they receive a higher value from the hardware.
 
-Likewise there's not much abstraction for additional controls or axes. There should be
-mode switching support, but I haven't implemented it yet.
+Configuration is kind of messy right now, via the `StickMode` struct and the
+`modeMap` array. Button clicks cycle through the modes for each stick.
 
+The configuration options are described in the code.
 
 ## This is not a commercial venture, and the Orbit Rat is not for sale
 
