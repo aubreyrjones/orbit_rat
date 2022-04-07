@@ -29,10 +29,10 @@ constexpr int buttonPins[] = {
 // calibration: low value, center, high value.
 // note that this is intentionally not `constexpr` to permit calibration.
 float axisExtents[][3] = {
-  {10, 520, 1000},
-  {10, 498, 1000},
-  {10, 530, 1000},
-  {10, 513, 1000}
+  {10, 520, 1015},
+  {10, 498, 1015},
+  {10, 530, 1015},
+  {10, 513, 1015}
 };
 
 
@@ -44,17 +44,17 @@ enum class MovementMode {
   SCROLL // translate stick movements into vertical and horizontal scroll
 };
 
-constexpr float exp_entry(float expCoef, float x) {
-  return pow(x, 2.71828 * expCoef);
+constexpr float exp_entry(float expCoef, float x, float scale = 1.0f) {
+  return scale * pow(x, 2.71828 * expCoef);
 }
 
-using ExpoTable = std::array<float, 40>;
+using ExpoTable = std::array<float, 10>;
 
-constexpr ExpoTable makeExpoTable(float expCoef) {
+constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
   ExpoTable retval = {};
   float step = 1.0f / (retval.size() - 1);
   for (unsigned int i = 0; i < retval.size(); i++) {
-    retval[i] = exp_entry(expCoef, i * step);
+    retval[i] = exp_entry(expCoef, i * step, scale);
   }
   return retval;
 }
@@ -75,7 +75,7 @@ struct StickMode {
   bool activeButtons[3]; // which buttons to press? left, middle, right
   int activeKey = 0; // which key to hold down during mouse motion
 
-  ExpoTable const& curve = linearCurve;
+  ExpoTable curve = linearCurve;
 
   int chaseKey = 0; // key to press after each motion step to "chase"
   int chaseMods = 0; // modifiers to press along with the chase key.
@@ -102,7 +102,7 @@ StickMode modeMap[n_axes / 2][n_stick_modes] = {
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::SCROLL, 0, -1400, {false, false, false}, 0, linearCurve},
+    StickMode { MovementMode::SCROLL, 0, -1, {false, false, false}, 0, makeExpoTable(0.4, 1400.0f)}, //linearCurve},
     StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
@@ -191,10 +191,6 @@ struct StickState {
   // call this when this stick is active and controlling the cursor.
   void activate() {
     clearMotion();
-
-    if (mode().move == MovementMode::SCROLL) {
-      
-    }
   }
 
   // call this when the stick is done.
@@ -281,13 +277,13 @@ struct StickState {
   // update scrolling based on stick axes.
   void moveScrollMotion(bool firstMove) {
     accumulateMotion(scrollAccum);
-    if (firstMove) {
+    if (firstMove) { // force a move on the first step
       for (int & s : scrollAccum) {
         if (s < 0) {
-          s = -10000;
+          s += -10000;
         }
         else if (s > 0) {
-          s = 10000;
+          s += 10000;
         }
       }
     }
@@ -487,7 +483,7 @@ void updateButtons() {
       buttonState[i] = true;
       button_clicked[i](i);
     }
-    else if (buttons[i].rose() && buttonState[i]) {
+    else if (buttons[i].rose()) {
       buttonState[i] = false;
     }
   }
