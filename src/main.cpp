@@ -102,7 +102,7 @@ StickMode modeMap[n_axes / 2][n_stick_modes] = {
     //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
   },
   {
-    StickMode { MovementMode::SCROLL, 0, -2000, {false, false, false}, 0, deepCurve},
+    StickMode { MovementMode::SCROLL, 0, -1400, {false, false, false}, 0, linearCurve},
     StickMode { MovementMode::REWIND, orbit_speed, orbit_speed, {false, true, false}, KEY_LEFT_SHIFT },
     //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
   }
