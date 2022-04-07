@@ -13,7 +13,7 @@ The OR is designed around a pair of small joysticks, like those on a gamepad con
 joysticks then control pan and orbit in CAD, art, and graphic design programs by specially
 emulating a mouse. _No special drivers or plugins needed_, works in any operating system.
 
-This is not a regular joystick-controlled mouse. This implements a special "rewind" operation
+This is not a regular joystick-controlled mouse. OR implements a special "rewind" operation
 after every motion, which resets the mouse cursor position and unlocks near-infinite pan/orbit 
 in any program that uses middle-click and drag for pan.
 
@@ -60,6 +60,19 @@ The only requirement is that for the Teensy mouse specifically, you must set the
 system settings. If you don't, the cursor will not return to the correct location. You should be able
 to leave acceleration on for your regular mouse however you like it.
 
+# Configuration and Building
+
+Orbit Rat is configured in source code and built with [PlatformIO](https://platformio.org/).
+
+The easiest way to use PlatformIO is just to use VisualStudio Code (not Visual Studio) with
+the free PlatformIO plugin from the marketplace. Standalone setups may work but I haven't
+tested them.
+
+When you first build, it may seem to stall for a very long time. It's downloading a newer
+compiler from a very slow connection. It gives no progress indicator. It seriously
+took me 20 minutes to download. This only happens the first time you build.
+
+Configuration is at the top of `main.cpp`.
 
 # Hardware
 

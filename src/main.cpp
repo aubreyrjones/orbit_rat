@@ -2,34 +2,51 @@
 #include <Keyboard.h>
 #include <Bounce2.h>
 #include <functional>
+#include "config_types.hpp"
 
+/**
+ * BEGIN CONFIGURATION
+*/
+
+// firmware behavior.
 constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
-constexpr bool autocal = true; // attempt to automatically calibrate during use. Makes things a little weird at startup.
+constexpr bool autocal = true; // attempt to automatically calibrate during use.
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
-constexpr int pan_speed = 25; // max speed of pan motion (first stick). Negative to invert motion.
-constexpr int orbit_speed = 10; // max speed of orbit motion (second stick)
+
+// stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
+constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
+constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
+constexpr auto zoomScrollCurve = make_curve(1400, 0.8); // note that scroll speed is on a different order of magnitude, also major expo
+
+// set up the list of stick modes for each axis.
+// note the fancy named initializer list thingie. Note that even if there are gaps, fields must be referenced
+// in the order they're defined. Check `config_types.hpp` for details.
+constexpr auto stickModes = declare_mode_map(
+  std::array {
+    StickMode { MovementMode::REWIND, panCurve, {false, true, false} },
+    StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 }
+  },
+  std::array {
+    StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = 0},
+    StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT }
+  }
+);
+
+// global motion/stick behavior options
+
 constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
-constexpr int stutter_step = 1000;
-constexpr int button_debounce_interval = 25;
+constexpr int stutter_step = 1000; // how far to move the cursor in stutter mode before stuttering back.
+constexpr int button_debounce_interval = 25; // how many ms any button needs to be held for to register.
 
-// theoretically configurable, but you'd need different hardware.
-constexpr int n_axes = 4; // number of axes we're going to sample. Every pair of axes is probably a "stick".
-constexpr int n_buttons = 2; // number of buttons
 
-// Which pin goes to which axis? These are Teensy ANALOG pin numbers.
-// pan stick horizontal, pan stick vertical, orbit stick horizontal, orbit stick vertical
-constexpr int axisPins[] = {
-  1, 0, 8, 7
-};
 
-// which pins are stick-press buttons attached to? These are Teensy DIGITAL pin numbers.
-constexpr int buttonPins[] = {
-  16, 23
-};
+/* HARDWARE CONFIGURATION */
+
+constexpr bool hasSpinner = false; // have you got the adafruit ANO rotary encoder installed?
 
 // calibration: low value, center, high value.
-// note that this is intentionally not `constexpr` to permit calibration.
+// note that this is intentionally not `constexpr` to permit live calibration.
 int16_t axisExtents[][3] = {
   {10, 520, 1015},
   {10, 498, 1015},
@@ -37,77 +54,39 @@ int16_t axisExtents[][3] = {
   {10, 513, 1015}
 };
 
-// Options for how the stick will move the mouse, scroll wheel, etc.
-enum class MovementMode {
-  REWIND, // do a motion then unwind the cursor position
-  STUTTER, // continuously move, then unwind after a certain threshold, then continue
-  SIMPLE, // don't unwind at all
-  CHASE, // move, then activate keyboard command, continuously.
-  SCROLL // translate stick movements into vertical and horizontal scroll
+// stuff below here requires different hardware than OrbitRat is designed for. It's useful
+// if you're trying to hack this software to support new input devices or
+// if you built your rat differently than I do.
+
+constexpr int n_axes = 4; // number of axes we're going to sample. Every pair of axes is probably a "stick".
+
+// pin assignments
+
+// Which pin goes to which axis? These are Teensy ANALOG pin numbers.
+constexpr uint8_t axisPins[] = {
+  1, 0, 8, 7
 };
 
-// defines a stick curve entry
-constexpr float exp_entry(float expCoef, float x, float scale = 1.0f) {
-  return scale * pow(x, 2.71828 * expCoef);
-}
+constexpr int n_buttons = hasSpinner ? 7 : 2; // number of buttons
 
-// A curve used to interpolate stick positions.
-using ExpoTable = std::array<short, 10>;
-
-// build a curve of the form `scale * x^(e*expCoef)`.
-constexpr ExpoTable makeExpoTable(float expCoef, float scale = 1.0f) {
-  ExpoTable retval = {};
-  float step = 1.0f / (retval.size() - 1);
-  for (unsigned int i = 0; i < retval.size(); i++) {
-    retval[i] = exp_entry(expCoef, i * step, scale);
-  }
-  return retval;
-}
-
-
-struct StickMode {
-  MovementMode move; // which movement mode?
-  ExpoTable curve; // how fast and on what curve to move the mouse or wheel?
-  bool activeButtons[3]; // which buttons to press? left, middle, right
-
-  int activeKey = 0; // which key to hold down during mouse motion
-  
-  int8_t horDir = -1; // set positive or inverted motion, or 0 for null axis.
-  int8_t vertDir = -1; // same as horDir.
-
-  int chaseKey = 0; // key to press after each motion step to "chase"
-  int chaseMods = 0; // modifiers to press along with the chase key.
-
-  int motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
-
-
-  bool hasButtons() const {
-    return activeButtons[0] || activeButtons[1] || activeButtons[2];
-  }
-
-  bool hasKey() const {
-    return activeKey;
-  }
+// which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
+// first two pins listed should be for the buttons _on_ stick 0 and stick 1.
+// the rest are for the spinner buttons.
+// something neat! since this is constexpr, and `n_buttons` is also const
+// the compiler seems to know that the unused values aren't referenced and
+// doesn't keep them in the table if you have the spinner disabled.
+constexpr uint8_t buttonPins[] = { 
+  16, 23, 0, 0, 0, 0, 0 
 };
 
-constexpr int n_stick_modes = 2; // how many modes for each stick?
+/**
+ * END CONFIGURATION
+*/
 
-// Configure the modes for each stick.
-StickMode modeMap[n_axes / 2][n_stick_modes] = {
-  {
-    StickMode { MovementMode::REWIND, makeExpoTable(0.4, pan_speed), {false, true, false} },
-    StickMode { MovementMode::STUTTER, makeExpoTable(0.4, pan_speed), {false, true, false}, 0, -1, -1, 0, 0, 25 },
-    //StickMode { MovementMode::CHASE, -pan_speed, {false, true, false}, 0, KEY_M, MODIFIERKEY_LEFT_ALT | MODIFIERKEY_LEFT_SHIFT }
-  },
-  {
-    StickMode { MovementMode::SCROLL, makeExpoTable(0.8, 1400.0f), {false, false, false}, 0, 0, -1}, 
-    StickMode { MovementMode::REWIND, makeExpoTable(0.4, orbit_speed), {false, true, false}, KEY_LEFT_SHIFT },
-    //StickMode { MovementMode::REWIND, pan_speed, {false, true, false}, KEY_LEFT_SHIFT },
-  }
-};
+
 
 // raw state sampled from analog inputs
-int axisValues[n_axes] = {0, 0, 0, 0};
+int16_t axisValues[n_axes] = {0, 0, 0, 0};
 
 // button debouncers
 Bounce buttons[n_buttons] = {Bounce(), Bounce()};
@@ -127,7 +106,7 @@ constexpr bool eitherMagAbove(T vec[2], T threshold){
 }
 
 // sample a curve from a stick position and return the value.
-short sampleExpoCurve(ExpoTable const& curve, float pos) {
+short sampleExpoCurve(StickCurve const& curve, float pos) {
   int point = abs(pos * (curve.size() - 1));
   auto sign = pos >= 0 ? 1 : -1;
   return curve[point] * sign;
@@ -160,7 +139,7 @@ struct StickState {
 
   // gets the current mode
   StickMode const& mode() {
-    return modeMap[index][activeStickMode];
+    return stickModes.getMode(index, activeStickMode);
   };
 
   // clears all the motion accumulators.
@@ -344,16 +323,7 @@ StickState sticks[n_axes / 2] = {
 // read the analog sticks.
 void readSticks() {
   for (int i = 0; i < n_axes; i++) {
-    auto val = axisValues[i] = analogRead(axisPins[i]);
-
-    if constexpr (autocal) {
-      if (val < axisExtents[i][0]) {
-        axisExtents[i][0] = val;
-      }
-      else if (val > axisExtents[i][2]) {
-        axisExtents[i][2] = val;
-      }
-    }
+    axisValues[i] = analogRead(axisPins[i]);
   }
 }
 
@@ -371,38 +341,32 @@ unsigned int to_joy(float val) {
 // Normalize the raw values read from the analog sticks.
 void normalizeSticks() {
   for (int i = 0; i < n_axes; i++) {
-    if (axisValues[i] < axisExtents[i][1]) {
-      if (axisValues[i] < axisExtents[i][0]) {
-        axisValues[i] = axisExtents[i][0];
+    if (axisValues[i] < axisExtents[i][1]) { // which half of the stick are we on?
+      if (axisValues[i] < axisExtents[i][0]) { // are we oversaturated?
+        if constexpr (autocal) { // if we're in autocal mode, change the limit
+          axisExtents[i][0] = axisValues[i];
+        }
+        else {
+          axisValues[i] = axisExtents[i][0]; // if we're not in autocal, just clamp it.
+        }
       }
-      normalizedAxes[i] = -(1 - normalize(axisExtents[i][0], axisValues[i], axisExtents[i][1]));
+
+      normalizedAxes[i] = -1 + normalize(axisExtents[i][0], axisValues[i], axisExtents[i][1]);
     }
-    else {
-      if (axisValues[i] > axisExtents[i][2]) {
-        axisValues[i] = axisExtents[i][2];
+    else {  
+      if (axisValues[i] > axisExtents[i][2]) { // oversatured?
+        if constexpr (autocal) {
+          axisExtents[i][2] = axisValues[i];
+        }
+        else {
+          axisValues[i] = axisExtents[i][2];
+        }
       }
+      
       normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]);
     }
+
     normalizedAxes[i] = -normalizedAxes[i]; // invert all channels to get normalized motion.
-  }
-}
-
-// Do arduino setup.
-void setup() {
-  Serial.begin(38400);
-
-  // set up button with the Bounce library.
-  for (int i = 0; i < n_buttons; i++) {
-    buttons[i].attach(buttonPins[i], INPUT_PULLUP);
-    buttons[i].interval(button_debounce_interval);
-  }
-
-  if /*constexpr*/ (calibrate_on_startup) {
-    // calibrate stick centers.
-    readSticks();
-    for (int i = 0; i < n_axes; i++) {
-      axisExtents[i][1] = axisValues[i];
-    }
   }
 }
 
@@ -444,29 +408,24 @@ StickState *activeStick = nullptr;
 
 // Update mouse motion state and send HID reports.
 void sendMouse() {
-
-  // are we in a move that has now stopped?
-  if (activeStick && activeStick->checkDeadzone()) {
-    activeStick->deactivate();
-    activeStick = nullptr;
-    return;    
-  }
-
-  if (!activeStick) {
-    for (StickState & stick : sticks) {
-      if (!stick.checkDeadzone()) {
-        activeStick = &stick;
-        goto start_move;
-      }
+  if (activeStick) { // are we in an active move?
+    if (activeStick->checkDeadzone()) { // did it stop?
+      activeStick->deactivate();
+      activeStick = nullptr;
     }
-    return; // skipped by goto if we have a live stick
-    
-    start_move:
-    activeStick->activate();
-    activeStick->moveActiveMotion(true);
+    else { // still active, so keep moving.
+      activeStick->moveActiveMotion(false);
+    }
   }
   else {
-    activeStick->moveActiveMotion(false);
+    for (StickState & stick : sticks) { // check for the first stick out of its deadzone
+      if (!stick.checkDeadzone()) {
+        activeStick = &stick;
+        activeStick->activate(); // bust a move.
+        activeStick->moveActiveMotion(true);
+        return;
+      }
+    }
   }
 }
 
@@ -476,7 +435,7 @@ using button_func = std::function<void(int)>;
 // basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
   //Serial.print("clicked "); Serial.println(button);
-  sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % n_stick_modes;
+  sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
 };
 
 button_func button_clicked[] = {
@@ -499,10 +458,33 @@ void updateButtons() {
   }
 }
 
+/**
+ * ARDUINO HOOKS
+*/
+
+void setup() {
+  Serial.begin(38400);
+
+  // set up button with the Bounce library.
+  for (int i = 0; i < n_buttons; i++) {
+    buttons[i].attach(buttonPins[i], INPUT_PULLUP);
+    buttons[i].interval(button_debounce_interval);
+  }
+
+  if constexpr (calibrate_on_startup) {
+    // calibrate stick centers.
+    readSticks();
+    for (int i = 0; i < n_axes; i++) {
+      axisExtents[i][1] = axisValues[i];
+    }
+  }
+}
+
+
 void loop() {
   readSticks();
-  normalizeSticks();
   updateButtons();
+  normalizeSticks();
 
   if constexpr (send_joystick_hid) { 
     sendJoystick();
