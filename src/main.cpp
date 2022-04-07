@@ -9,7 +9,7 @@
 */
 
 // firmware behavior.
-constexpr bool calibrate_on_startup = true; // record startup reading from sticks as center value?
+constexpr bool center_on_startup = true; // record startup reading from sticks as center value?
 constexpr bool autocal = true; // attempt to automatically calibrate during use.
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 
@@ -471,7 +471,7 @@ void setup() {
     buttons[i].interval(button_debounce_interval);
   }
 
-  if constexpr (calibrate_on_startup) {
+  if constexpr (center_on_startup) {
     // calibrate stick centers.
     readSticks();
     for (int i = 0; i < n_axes; i++) {

@@ -70,15 +70,18 @@ tested them.
 
 When you first build, it may seem to stall for a very long time. It's downloading a newer
 compiler from a very slow connection. It gives no progress indicator. It seriously
-took me 20 minutes to download. This only happens the first time you build.
+took me 20 minutes to download. This only happens the first time you build. It also
+may finish the download, try to compile, then say it failed... try again before
+concluding it doesn't work.
 
-Configuration is at the top of `main.cpp`.
+Configuration is at the top of `main.cpp`. You can learn more about the options in 
+`config_types.hpp`.
 
 # Hardware
 
 This isn't commercial hardware or software. I assume you know your way around Arduino
-and that you can follow instructions about installing and using Teensyduino
-or PlatformIO (in vscode).
+and that you can google and follow instructions about installing and using 
+PlatformIO (in vscode).
 
 Assuming you'll use the software mostly unmodified, you need to hook up a pair of
 potentiometer joysticks to the Teensy's analog inputs. That's pretty much it.
@@ -86,26 +89,19 @@ potentiometer joysticks to the Teensy's analog inputs. That's pretty much it.
 For the prototype I used the model sold on SparkFun, along with their breakout boards. 
 
 I wired up the axes directly to the Teensy LC analog pins. I added pullup resistors on the switches
-There are internal pullups that could work fine, but I didn't test that way.
-
-You can calibrate the sticks by adjusting the `axisExtents` variable. There are also 
-variables near that for controlling the motion speed.
+There are internal pullups that could work, but I didn't test that way.
 
 
 # Software
 
 The software isn't written to be especially efficient. It's written for a Teensy LC,
 which has a 48MHz core clock. I haven't noticed that input rates are too low, so
-I freely indulge in emulated floating point.
+I don't worry about a bit of fake floating point.
 
 Calibration is quasi-automatic right now (although you can turn it off). By default, 
 the center point is read at startup. Conservative endpoints are taken as a default,
-but will expand if they receive a higher value from the hardware.
-
-Configuration is kind of messy right now, via the `StickMode` struct and the
-`modeMap` array. Button clicks cycle through the modes for each stick.
-
-The configuration options are described in the code.
+but will expand if they receive a higher value from the hardware. You can turn
+off both these features at the top of `main.cpp`.
 
 ## This is not a commercial venture, and the Orbit Rat is not for sale
 
