@@ -33,6 +33,8 @@ Tested to work with default settings in:
 
 # How it Works
 
+This is pretty configurable, but by default...
+
 When you tilt the stick outside the deadzone, Orbit Rat emulates a mouse holding down the middle
 mouse button and starting a drag motion. This starts a pan action in lots of CAD and art software. 
 The viewport will move as if you're panning with the mouse so long as you're tiling the stick.
@@ -58,6 +60,48 @@ and drag for pan.
 
 It can also do other stuff, like sending scroll wheel events and keyboard keys... but the rewind
 operation is what it does uniquely.
+
+
+# Features
+
+* User defined list of stick modes and parameters to use. As many as you like until
+  you run out of RAM. Most of what's discussed below can be set per mode.
+
+* Cycle through your defined modes by clicking the stick buttons.
+
+* REWIND - stick initiates a mouse movement, then OR returns the cursor to its starting
+  position when you let go of the stick.
+
+* STUTTER - similar to rewind mode, but continually moves a set distance, rewinds, then 
+  repeats as long as you hold down the button. Not smooth, but allows "infinite" scrolling
+  with limited screen real estate.
+
+* SIMPLE - just be a mouse cursor, no rewind.
+
+* SCROLL - stick movement sends scroll wheel commands. Useful for CAD zoom, or
+  document scrolling.
+
+* User-defined stick curves, so you can tweak the sensitivity of each stick.
+
+* Invert or ignore any stick axis.
+
+* Choose mouse button(s) and/or keyboard key that is held during mouse motion.
+
+* Auto-calibrates joysticks by default (although not perfectly)
+
+* Configurable to send HID joystick events if desired for custom application code.
+
+* Parts are available circa Q2 2022. Teensy LC available despite chip shortage. 
+  Joysticks and other parts available from hobby electronics suppliers (Sparkfun, 
+  Adafruit).
+
+
+# _Planned_ Features
+
+* Optional support for Adafruit ANO rotary encoder and nav buttons
+* RGB status LEDs (DotStar) for each stick's modes
+* PCB reference design
+* Left-handed PCB design
 
 
 # Limitations
