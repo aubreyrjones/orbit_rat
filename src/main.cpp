@@ -16,6 +16,10 @@ constexpr bool send_joystick_hid = false; // (also) send HID joystick records fo
 // stick diagnostics data, enable to output on serial
 constexpr bool output_diag = false;
 
+// teensy LED as status
+constexpr uint8_t ledPin = 13;
+constexpr bool flash_on_ready = false;
+
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
 constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
@@ -466,6 +470,13 @@ void updateButtons() {
 */
 
 void setup() {
+  if constexpr (flash_on_ready)
+  {
+      digitalWrite(ledPin, HIGH);
+      delay(100);
+      digitalWrite(ledPin, LOW);
+  }
+
   Serial.begin(38400);
 
   // set up button with the Bounce library.
@@ -481,8 +492,18 @@ void setup() {
       axisExtents[i][1] = axisValues[i];
     }
   }
-}
 
+  if constexpr (flash_on_ready)
+  {
+    for (int i = 0; i < 2; ++i)
+    {
+      digitalWrite(ledPin, HIGH);
+      delay(75);
+      digitalWrite(ledPin, LOW);
+      delay(75);
+    }
+  }
+}
 
 void loop() {
   readSticks();
