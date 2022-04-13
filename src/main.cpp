@@ -19,6 +19,7 @@ constexpr bool output_diag = false;
 // teensy LED as status
 constexpr uint8_t ledPin = 13;
 constexpr bool flash_on_ready = false;
+constexpr bool flash_on_mode_switch = false;
 
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
@@ -443,6 +444,16 @@ using button_func = std::function<void(int)>;
 void advance_mode(int button) {
   if constexpr (output_diag) { Serial.print("clicked "); Serial.println(button); }
   sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
+
+  if constexpr (flash_on_mode_switch) {
+    for (int i = 0; i < sticks[button].activeStickMode + 1; ++i)
+    {
+        digitalWrite(ledPin, HIGH);
+        delay(80);
+        digitalWrite(ledPin, LOW);
+        delay(80);
+    }
+  }
 };
 
 button_func button_clicked[] = {
@@ -470,11 +481,15 @@ void updateButtons() {
 */
 
 void setup() {
-  if constexpr (flash_on_ready)
+  if constexpr (flash_on_ready || flash_on_mode_switch)
   {
+    pinMode(ledPin, OUTPUT);
+    if constexpr (flash_on_ready)
+    {
       digitalWrite(ledPin, HIGH);
       delay(100);
       digitalWrite(ledPin, LOW);
+    }
   }
 
   Serial.begin(38400);
