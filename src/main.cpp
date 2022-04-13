@@ -13,6 +13,9 @@ constexpr bool center_on_startup = true; // record startup reading from sticks a
 constexpr bool autocal = true; // attempt to automatically calibrate during use.
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 
+// stick diagnostics data, enable to output on serial
+constexpr bool output_diag = false;
+
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
 constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
@@ -434,7 +437,7 @@ using button_func = std::function<void(int)>;
 
 // basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
-  //Serial.print("clicked "); Serial.println(button);
+  if constexpr (output_diag) { Serial.print("clicked "); Serial.println(button); }
   sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
 };
 
@@ -493,11 +496,14 @@ void loop() {
   sendMouse();
 
   // temporarily uncomment this block to get values printed out to serial for calibration purposes.
-  // Serial.print("axes ");
-  // for (int i = 0; i < n_axes; i++) {
-  //   Serial.print(axisValues[i]);
-  //   Serial.print(",");
-  // }
-  // Serial.print("\n");
-  // delay(80);
+  if constexpr (output_diag)
+  {
+    Serial.print("axes ");
+    for (int i = 0; i < n_axes; i++) {
+      Serial.print(axisValues[i]);
+      Serial.print(",");
+    }
+    Serial.print("\n");
+    delay(80);
+  }
 }
