@@ -4,7 +4,7 @@
 
 // Options for how the stick will move the mouse, scroll wheel, etc.
 enum class MovementMode {
-  REWIND, // do a motion then unwind the cursor position when the stick is relased
+  REWIND, // do a motion then unwind the cursor position when the stick is released
   STUTTER, // move, then unwind after `stutter_step` movement, then repeat, until the stick is released.
   SIMPLE, // don't unwind at all, just move the cursor
   CHASE, // move, then activate keyboard command, continuously. This doesn't work that great, honestly.

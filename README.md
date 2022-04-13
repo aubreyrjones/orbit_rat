@@ -98,7 +98,6 @@ operation is what it does uniquely.
 
 # _Planned_ Features
 
-* Optional support for Adafruit ANO rotary encoder and nav buttons
 * RGB status LEDs (DotStar) for each stick's modes
 * PCB reference design
 * Left-handed PCB design
@@ -174,6 +173,17 @@ Calibration is quasi-automatic right now (although you can turn it off). By defa
 the center point is read at startup. Conservative endpoints are taken as a default,
 but will expand if they receive a higher value from the hardware during operation. You 
 can turn off both these features at the top of `main.cpp`.
+
+## Troubleshooting
+
+> Problem: I flashed the firmware and plugged it into the computer, but my mouse doesn't 
+work or moves erratically.
+
+This is "normal" if you flash the Teensy with Orbit Rat firmware, but have not attached
+the joysticks to it. Without the joysticks, the Teensy input voltages drift randomly
+and result in erratic movement. Ideally, install both joysticks. If you need just
+one joystick for some reason, adjust `n_axes` to equal `2` and fix the resultant
+compile errors.
 
 ## This is not a commercial venture, and the Orbit Rat is not for sale
 

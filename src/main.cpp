@@ -13,6 +13,15 @@ constexpr bool center_on_startup = true; // record startup reading from sticks a
 constexpr bool autocal = true; // attempt to automatically calibrate during use.
 constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
 
+constexpr bool serial_status_reports = true; // (also) output structured serial reports
+/**
+ * Serial reports are of the formats:
+ * AXES a0 a1 a2 ...   // raw axis values from 0 to 1023.
+ * NORM a0 a1 a2 ...   // normalized axis values, from -100 to +100.
+ * BP index             // `index` button was pressed
+ * BR index             // `index` button was released
+*/
+
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
 constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
@@ -43,7 +52,18 @@ constexpr int button_debounce_interval = 25; // how many ms any button needs to 
 
 /* HARDWARE CONFIGURATION */
 
-constexpr bool hasSpinner = false; // have you got the adafruit ANO rotary encoder installed?
+constexpr bool hasSpinner = false; // have you got a rotary encoder installed?
+
+/**
+ * Axis, stick, and button ordering:
+ * 
+ * Sticks are made up of consecutive pairs of axes. First the X axis for that stick, then the Y axis.
+ * So stick 0 is made of axis 0 (x) and axis 1 (y), stick 1 is axis 2 (x) and axis 3 (y), etc.
+ * 
+ * The first two buttons are the integrated buttons for stick 0 and stick 1 respectively.
+**/
+
+constexpr int n_axes = 4; // number of axes we're going to sample. Every pair of axes is a "stick".
 
 // calibration: low value, center, high value.
 // note that this is intentionally not `constexpr` to permit live calibration.
@@ -57,8 +77,6 @@ int16_t axisExtents[][3] = {
 // stuff below here requires different hardware than OrbitRat is designed for. It's useful
 // if you're trying to hack this software to support new input devices or
 // if you built your rat differently than I do.
-
-constexpr int n_axes = 4; // number of axes we're going to sample. Every pair of axes is probably a "stick".
 
 // pin assignments
 
@@ -449,10 +467,20 @@ void updateButtons() {
     buttons[i].update();
 
     if (buttons[i].fell()) {
+      if constexpr (serial_status_reports) {
+        Serial.print("BP ");
+        Serial.println(i);
+      }
+
       buttonState[i] = true;
       button_clicked[i](i);
     }
     else if (buttons[i].rose()) {
+      if constexpr (serial_status_reports) {
+        Serial.print("BR ");
+        Serial.println(i);
+      }
+
       buttonState[i] = false;
     }
   }
@@ -463,7 +491,9 @@ void updateButtons() {
 */
 
 void setup() {
-  Serial.begin(38400);
+  if constexpr (serial_status_reports) {
+    Serial.begin(38400);
+  }
 
   // set up button with the Bounce library.
   for (int i = 0; i < n_buttons; i++) {
@@ -492,12 +522,19 @@ void loop() {
 
   sendMouse();
 
-  // temporarily uncomment this block to get values printed out to serial for calibration purposes.
-  // Serial.print("axes ");
-  // for (int i = 0; i < n_axes; i++) {
-  //   Serial.print(axisValues[i]);
-  //   Serial.print(",");
-  // }
-  // Serial.print("\n");
-  // delay(80);
+  if constexpr (serial_status_reports) {
+    Serial.print("AXES ");
+    for (auto const& a : axisValues) {
+      Serial.print(a);
+      Serial.print(" ");
+    }
+    Serial.print("\n");
+
+    Serial.print("NORM ");
+    for (auto const& a : normalizedAxes) {
+      Serial.print((int) (a * 100));
+      Serial.print(" ");
+    }
+    Serial.print("\n");
+  }
 }
