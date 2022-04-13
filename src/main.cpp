@@ -1,25 +1,12 @@
 #include <Arduino.h>
 #include <Keyboard.h>
 #include <Bounce2.h>
+#include <Metro.h>
 #include <functional>
 #include "config_types.hpp"
 
 /**
  * BEGIN CONFIGURATION
-*/
-
-// firmware behavior.
-constexpr bool center_on_startup = true; // record startup reading from sticks as center value?
-constexpr bool autocal = true; // attempt to automatically calibrate during use.
-constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
-
-constexpr bool serial_status_reports = true; // (also) output structured serial reports
-/**
- * Serial reports are of the formats:
- * AXES a0 a1 a2 ...   // raw axis values from 0 to 1023.
- * NORM a0 a1 a2 ...   // normalized axis values, from -100 to +100.
- * BP index             // `index` button was pressed
- * BR index             // `index` button was released
 */
 
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
@@ -36,19 +23,43 @@ constexpr auto stickModes = declare_mode_map(
     StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 }
   },
   std::array { // stick 1
-    StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = 0},
+    StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = NULL_AXIS},
     StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT }
   }
 );
 
-// global motion/stick behavior options
+// global mouse/stick behavior options
 
 constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 constexpr int stutter_step = 1000; // how far to move the cursor in stutter mode before stuttering back.
 constexpr int button_debounce_interval = 25; // how many ms any button needs to be held for to register.
+constexpr int mouse_interval = 10; // minimum interval between mouse motion updates, in ms. (not recommended to change)
+// note that changing the mouse_interval will affect all mouse and scrolling speeds
 
+// firmware behavior.
 
+/* calibration options */
+constexpr bool center_on_startup = true; // record startup reading from sticks as center value?
+constexpr bool autocal = true; // attempt to automatically calibrate during use.
+
+/* HID joystick options */
+constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
+constexpr int joystick_interval = 10; // minimum interval between joystick HID reports, in ms.
+
+/* USB serial options */
+constexpr bool serial_status_reports = false; // (also) output structured serial reports
+constexpr bool serial_raw_axes = true; // report raw axis values
+constexpr bool serial_norm_axes = true; // report normalized axis values
+constexpr bool serial_buttons = true; // report button presses
+constexpr int serial_interval = 100; // minimum interval between serial axis reports, in ms
+/**
+ * Serial reports are of the formats:
+ * AXES a0 a1 a2 ...   // raw axis values, from 0 to 1023.
+ * NORM a0 a1 a2 ...   // normalized axis values, from -100 to +100.
+ * BP index             // `index` button was pressed
+ * BR index             // `index` button was released
+*/
 
 /* HARDWARE CONFIGURATION */
 
@@ -74,6 +85,16 @@ int16_t axisExtents[][3] = {
   {10, 513, 1015}
 };
 
+// for each axis, set inversion mode. This should be set up so that the joystick reports
+// match the physical stick directions. Do not use this configuration value to control
+// the direction of mouse motion relative to the stick--use .vertDir and .horDir in
+// your StickMode to control the mouse motion inversion.
+// Basically, use these inversions to compensate for how you've mounted/rotated
+// your sticks.
+constexpr int8_t axisInvert[] = {
+  INVERT_AXIS, INVERT_AXIS, INVERT_AXIS, INVERT_AXIS
+};
+
 // stuff below here requires different hardware than OrbitRat is designed for. It's useful
 // if you're trying to hack this software to support new input devices or
 // if you built your rat differently than I do.
@@ -85,7 +106,7 @@ constexpr uint8_t axisPins[] = {
   1, 0, 8, 7
 };
 
-constexpr int n_buttons = hasSpinner ? 7 : 2; // number of buttons
+constexpr int n_buttons = hasSpinner ? 3 : 2; // number of buttons
 
 // which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
 // first two pins listed should be for the buttons _on_ stick 0 and stick 1.
@@ -94,7 +115,7 @@ constexpr int n_buttons = hasSpinner ? 7 : 2; // number of buttons
 // the compiler seems to know that the unused values aren't referenced and
 // doesn't keep them in the table if you have the spinner disabled.
 constexpr uint8_t buttonPins[] = { 
-  16, 23, 0, 0, 0, 0, 0 
+  16, 23, 0
 };
 
 /**
@@ -124,7 +145,7 @@ constexpr bool eitherMagAbove(T vec[2], T threshold){
 }
 
 // sample a curve from a stick position and return the value.
-short sampleExpoCurve(StickCurve const& curve, float pos) {
+StickCurve::value_type sampleExpoCurve(StickCurve const& curve, float pos) {
   int point = abs(pos * (curve.size() - 1));
   auto sign = pos >= 0 ? 1 : -1;
   return curve[point] * sign;
@@ -142,6 +163,7 @@ struct StickState {
   int scrollAccum[2] = {0, 0}; // accumulates scrolling motion, which is converted into distinct mousewheel clicks
   int unwindAccum[2] = {0, 0}; // accumulates _sent_ motion, used to unwind the cursor position.
   
+  bool stickActive = false; // is the stick currently in control?
   bool buttonsActivated = false; // are we currently holding down mousebuttons and keys?
 
   StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
@@ -194,6 +216,7 @@ struct StickState {
   // call this when this stick is active and controlling the cursor.
   void activate() {
     clearMotion();
+    stickActive = true;
   }
 
   // call this when the stick is done.
@@ -207,12 +230,14 @@ struct StickState {
       default:
         break;
     }
+
+    stickActive = false;
   }
 
   // stutters the mouse back to continue an active move.
   void stutterBack() {
-    delay(25);
     endActiveMotion();
+    //delay(25);
     unwindMotion();
   }
 
@@ -308,7 +333,7 @@ struct StickState {
       default:
        moveMouseMotion();
     }
-    delay(10);
+    //delay(10);
   }
 
   // unwind sent cursor motion to return the cursor to its start position
@@ -384,7 +409,7 @@ void normalizeSticks() {
       normalizedAxes[i] = normalize(axisExtents[i][1], axisValues[i], axisExtents[i][2]);
     }
 
-    normalizedAxes[i] = -normalizedAxes[i]; // invert all channels to get normalized motion.
+    normalizedAxes[i] = axisInvert[i] * normalizedAxes[i]; // invert all channels to get normalized motion.
   }
 }
 
@@ -452,7 +477,7 @@ using button_func = std::function<void(int)>;
 
 // basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
-  //Serial.print("clicked "); Serial.println(button);
+  if (sticks[button].stickActive) return; // don't change the mode on the active stick.
   sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
 };
 
@@ -467,7 +492,7 @@ void updateButtons() {
     buttons[i].update();
 
     if (buttons[i].fell()) {
-      if constexpr (serial_status_reports) {
+      if constexpr (serial_status_reports && serial_buttons) {
         Serial.print("BP ");
         Serial.println(i);
       }
@@ -476,7 +501,7 @@ void updateButtons() {
       button_clicked[i](i);
     }
     else if (buttons[i].rose()) {
-      if constexpr (serial_status_reports) {
+      if constexpr (serial_status_reports && serial_buttons) {
         Serial.print("BR ");
         Serial.println(i);
       }
@@ -510,31 +535,49 @@ void setup() {
   }
 }
 
+Metro joystickMetro(joystick_interval);
+Metro mouseMetro(mouse_interval);
+Metro serialMetro(serial_interval);
 
 void loop() {
   readSticks();
   updateButtons();
   normalizeSticks();
 
-  if constexpr (send_joystick_hid) { 
-    sendJoystick();
+  if constexpr (send_joystick_hid) {
+    if (joystickMetro.check()) {
+      sendJoystick();
+      joystickMetro.reset();
+    }
   }
 
-  sendMouse();
+  if (mouseMetro.check()) {
+    sendMouse();
+    mouseMetro.reset();
+  }
 
   if constexpr (serial_status_reports) {
-    Serial.print("AXES ");
-    for (auto const& a : axisValues) {
-      Serial.print(a);
-      Serial.print(" ");
-    }
-    Serial.print("\n");
+    if (serialMetro.check()) {
 
-    Serial.print("NORM ");
-    for (auto const& a : normalizedAxes) {
-      Serial.print((int) (a * 100));
-      Serial.print(" ");
+      if constexpr (serial_raw_axes) {
+        Serial.print("AXES ");
+        for (auto const& a : axisValues) {
+          Serial.print(a);
+          Serial.print(" ");
+        }
+        Serial.print("\n");
+      }
+      
+      if constexpr (serial_norm_axes) {
+        Serial.print("NORM ");
+        for (auto const& a : normalizedAxes) {
+          Serial.print((int) (a * 100));
+          Serial.print(" ");
+        }
+        Serial.print("\n");
+        serialMetro.reset();
+      }
     }
-    Serial.print("\n");
   }
 }
+

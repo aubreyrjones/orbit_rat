@@ -15,6 +15,10 @@ enum class MovementMode {
 // There's not much point increasing the size (resolution) of the curve. The joysticks aren't sensitive enough to benefit.
 using StickCurve = std::array<int16_t, 10>;
 
+constexpr auto INVERT_AXIS = -1;
+constexpr auto NO_INVERT_AXIS = 1;
+constexpr auto NULL_AXIS = 0;
+
 // Create a new StickMode and add it to `stickModes` in main to create a new operation mode for a stick.
 struct StickMode {
   MovementMode move; // which movement mode?
@@ -23,8 +27,8 @@ struct StickMode {
 
   int activeKey = 0; // which key to hold down during mouse motion
   
-  int8_t horDir = -1; // set positive (1) or inverted motion (-1), or 0 for null axis.
-  int8_t vertDir = -1; // same as horDir.
+  int8_t horDir = INVERT_AXIS; // set positive (1) or inverted motion (-1), or 0 for null axis.
+  int8_t vertDir = INVERT_AXIS; // same as horDir.
 
   int chaseKey = 0; // key to press after each motion step to "chase"
   int chaseMods = 0; // modifiers to press along with the chase key.
@@ -82,3 +86,4 @@ template <typename T1, typename T2>
 constexpr auto declare_mode_map(T1 const& aModes, T2 const& bModes) {
     return ModeMap<aModes.size(), bModes.size()>(aModes, bModes);
 }
+
