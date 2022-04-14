@@ -2,6 +2,8 @@ Orbit Rat
 ---------
 ![Orbit Rat prototype](sticks.jpeg)
 
+[Watch a demo](https://www.youtube.com/watch?v=k3nQiXu3pM4)
+
 THIS IS NOT A MOUSE REPLACEMENT. The Orbit Rat is a Teensy LC based PC input device designed
 to facilitate panning and orbiting in CAD and graphic design software.
 
