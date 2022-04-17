@@ -3,12 +3,13 @@ import hid
 from pprint import pprint
 
 vid = 0x16c0	# Change it for your device
-pid = 0x0478	# Change it for your device
+pid = 0x0487	# Change it for your device
 
-device_list = hid.enumerate()
+device_list = hid.enumerate(vid, pid)
 
 for dev in device_list:
-    if dev['interface_number'] == 6:
+    pprint(dev)
+    if dev['vendor_id'] == vid and dev['product_id'] == pid and dev['interface_number'] == 6:
         raw_hid_path = dev['path']
 
 
