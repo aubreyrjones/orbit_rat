@@ -21,19 +21,19 @@ constexpr auto NULL_AXIS = 0;
 
 // Create a new StickMode and add it to `stickModes` in main to create a new operation mode for a stick.
 struct StickMode {
-  MovementMode move; // which movement mode?
+  const MovementMode move; // which movement mode?
   const StickCurve& curve; // how fast and on what curve to move the mouse or wheel?
-  bool activeButtons[3] = {false, false, false}; // which buttons to press? left, middle, right
+  const bool activeButtons[3] = {false, false, false}; // which buttons to press? left, middle, right
 
-  int activeKey = 0; // which key to hold down during mouse motion
+  const int activeKey = 0; // which key to hold down during mouse motion
   
-  int8_t horDir = INVERT_AXIS; // set positive (1) or inverted motion (-1), or 0 for null axis.
-  int8_t vertDir = INVERT_AXIS; // same as horDir.
+  const int8_t horDir = INVERT_AXIS; // set positive (1) or inverted motion (-1), or 0 for null axis.
+  const int8_t vertDir = INVERT_AXIS; // same as horDir.
 
-  int chaseKey = 0; // key to press after each motion step to "chase"
-  int chaseMods = 0; // modifiers to press along with the chase key.
+  const int chaseKey = 0; // key to press after each motion step to "chase"
+  const int chaseMods = 0; // modifiers to press along with the chase key.
 
-  int motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
+  const int motionThreshold = 1; // how many pixels of movement are required to trigger mouse motion?
 
 
   constexpr bool hasButtons() const {

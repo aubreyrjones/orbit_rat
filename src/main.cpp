@@ -544,6 +544,11 @@ void loop() {
   updateButtons();
   normalizeSticks();
 
+  uint8_t hidbuf[64];
+  if (RawHID.recv(hidbuf, 0)) {
+    Serial.println((char *) hidbuf);
+  }
+
   if constexpr (send_joystick_hid) {
     if (joystickMetro.check()) {
       sendJoystick();
