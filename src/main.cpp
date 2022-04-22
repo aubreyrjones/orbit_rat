@@ -9,6 +9,8 @@
  * BEGIN CONFIGURATION
 */
 
+#define SUPPORT_RAT_DRIVER // comment out this line if you want to disable host driver support.
+
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
 constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
@@ -20,13 +22,26 @@ constexpr auto zoomScrollCurve = make_curve(1400, 0.8); // note that scroll spee
 constexpr auto stickModes = declare_mode_map(
   std::array { // stick 0
     StickMode { MovementMode::REWIND, panCurve, {false, true, false} },
-    StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 }
+    StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 },
+    StickMode { MovementMode::STUTTER, panCurve, {false, false, true} }
   },
   std::array { // stick 1
     StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = NULL_AXIS},
-    StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT }
+    StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, orbitCurve, {true, false, false}}
   }
 );
+
+#ifdef SUPPORT_RAT_DRIVER
+// when the driver is in use, these stick modes define the motion behavior for dynamic modes.
+// the actual buttons clicked/held will be adjusted via messages from the driver.
+// If you're not using the driver, you can leave these alone.
+auto dynamicModes = std::array {
+  StickMode { MovementMode::STUTTER, panCurve}, // dynamic pan
+  StickMode { MovementMode::REWIND, orbitCurve}, // dynamic orbit
+  StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = NULL_AXIS} // dynamic zoom
+};
+#endif 
 
 // global mouse/stick behavior options
 
@@ -38,6 +53,12 @@ constexpr int mouse_interval = 10; // minimum interval between mouse motion upda
 // note that changing the mouse_interval will affect all mouse and scrolling speeds
 
 // firmware behavior.
+
+#ifdef SUPPORT_RAT_DRIVER
+constexpr bool support_driver = true; // turn on firmware support for the `rat_tail` driver program
+#else
+constexpr bool support_driver = false;
+#endif
 
 /* calibration options */
 constexpr bool center_on_startup = true; // record startup reading from sticks as center value?
@@ -267,7 +288,6 @@ struct StickState {
   // update mouse motion from the sticks axes.
   void moveMouseMotion() {
     accumulateMotion(moveAccum);
-
     sendMotion();
 
     if (mode().move == MovementMode::STUTTER) {
@@ -544,10 +564,12 @@ void loop() {
   updateButtons();
   normalizeSticks();
 
+  #ifdef SUPPORT_RAT_DRIVER
   uint8_t hidbuf[64];
   if (RawHID.recv(hidbuf, 0)) {
     Serial.println((char *) hidbuf);
   }
+  #endif
 
   if constexpr (send_joystick_hid) {
     if (joystickMetro.check()) {
