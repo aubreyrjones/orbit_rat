@@ -14,7 +14,7 @@
 // stick -> motion curves you'll reference in your StickModes. Tweak these and make more if you want.
 constexpr auto panCurve = make_curve(25); // maximum movement speed, linear curve
 constexpr auto orbitCurve = make_curve(10, 0.5); // max speed with slight "expo" factor
-constexpr auto zoomScrollCurve = make_curve(1400, 0.8); // note that scroll speed is on a different order of magnitude, also major expo
+constexpr auto zoomScrollCurve = make_curve(1400, 0.6); // note that scroll speed is on a different order of magnitude, also major expo
 
 // set up the list of stick modes for each axis.
 // note the fancy named initializer list thingie. Note that even if there are gaps, fields must be referenced
@@ -45,7 +45,7 @@ auto dynamicModes = std::array {
 
 // global mouse/stick behavior options
 
-constexpr float deadzone = 0.01; // absolute normalized axis value must be above this to be considered active
+constexpr float deadzone = 0.08; // absolute normalized axis value must be above this to be considered active
 constexpr int max_unwind_step = 100; // how many pixels per HID report to move the mouse during unwinding
 constexpr int stutter_step = 1000; // how far to move the cursor in stutter mode before stuttering back.
 constexpr int button_debounce_interval = 25; // how many ms any button needs to be held for to register.
@@ -124,10 +124,11 @@ constexpr int8_t axisInvert[] = {
 
 // Which pin goes to which axis? These are Teensy ANALOG pin numbers.
 constexpr uint8_t axisPins[] = {
-  1, 0, 8, 7
+  // 1, 0, 8, 7    // breadboard rat
+  7, 8, 0, 1       // pcb rat
 };
 
-constexpr int n_buttons = hasSpinner ? 3 : 2; // number of buttons
+constexpr int n_buttons = hasSpinner ? 2 : 2; // number of buttons
 
 // which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
 // first two pins listed should be for the buttons _on_ stick 0 and stick 1.
@@ -136,7 +137,8 @@ constexpr int n_buttons = hasSpinner ? 3 : 2; // number of buttons
 // the compiler seems to know that the unused values aren't referenced and
 // doesn't keep them in the table if you have the spinner disabled.
 constexpr uint8_t buttonPins[] = { 
-  16, 23, 0
+  //16, 23, 0       // breadboard rat
+  23, 16, 0       // pcb rat
 };
 
 /**

@@ -3643,20 +3643,8 @@ type 0309, grid 2.5 mm</description>
 </deviceset>
 </devicesets>
 </library>
-<library name="SparkFun-LED">
-<description>&lt;h3&gt;SparkFun LEDs&lt;/h3&gt;
-This library contains discrete LEDs for illumination or indication, but no displays.
-&lt;br&gt;
-&lt;br&gt;
-We've spent an enormous amount of time creating and checking these footprints and parts, but it is &lt;b&gt; the end user's responsibility&lt;/b&gt; to ensure correctness and suitablity for a given componet or application. 
-&lt;br&gt;
-&lt;br&gt;If you enjoy using this library, please buy one of our products at &lt;a href=" www.sparkfun.com"&gt;SparkFun.com&lt;/a&gt;.
-&lt;br&gt;
-&lt;br&gt;
-&lt;b&gt;Licensing:&lt;/b&gt; Creative Commons ShareAlike 4.0 International - https://creativecommons.org/licenses/by-sa/4.0/ 
-&lt;br&gt;
-&lt;br&gt;
-You are welcome to use this library for commercial purposes. For attribution, we ask that when you begin to sell your device using our footprint, you email us with a link to the product being sold. We want bragging rights that we helped (in a very small part) to create your 8th world wonder. We would like the opportunity to feature your device on our homepage.</description>
+<library name="custom">
+<description>This is my custom stuff.</description>
 <packages>
 <package name="APA102-2020">
 <description>&lt;h3&gt;APA102-2020&lt;/h3&gt;
@@ -3666,88 +3654,57 @@ You are welcome to use this library for commercial purposes. For attribution, we
 &lt;li&gt;Size: 2.0 x 2.0 mm&lt;/li&gt;
 &lt;/ul&gt;&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;Datasheet referenced for footprint:&lt;/b&gt; &lt;a href="https://cdn.sparkfun.com/assets/home_page_posts/2/3/9/8/APA102-2020_1.pdf"&gt;APA102-2020&lt;/a&gt;&lt;/p&gt;</description>
-<smd name="CKI" x="-0.8" y="-0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<smd name="CKO" x="0.8" y="-0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<smd name="VDD" x="0" y="-0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<smd name="SDI" x="-0.8" y="0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<smd name="GND" x="0" y="0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<smd name="SDO" x="0.8" y="0.85" dx="0.7" dy="0.4" layer="1" rot="R90" cream="no"/>
-<wire x1="-0.15" y1="0.45" x2="0.15" y2="0.45" width="0.1" layer="51"/>
-<wire x1="0.15" y1="0.45" x2="0.15" y2="0.95" width="0.1" layer="51"/>
-<wire x1="0.15" y1="0.95" x2="-0.15" y2="0.95" width="0.1" layer="51"/>
-<wire x1="-0.15" y1="0.95" x2="-0.15" y2="0.45" width="0.1" layer="51"/>
-<wire x1="0.65" y1="0.45" x2="0.95" y2="0.45" width="0.1" layer="51"/>
-<wire x1="0.95" y1="0.45" x2="0.95" y2="0.95" width="0.1" layer="51"/>
-<wire x1="0.95" y1="0.95" x2="0.65" y2="0.95" width="0.1" layer="51"/>
-<wire x1="0.65" y1="0.95" x2="0.65" y2="0.45" width="0.1" layer="51"/>
-<wire x1="-0.65" y1="0.45" x2="-0.65" y2="0.95" width="0.1" layer="51"/>
-<wire x1="-0.65" y1="0.95" x2="-0.95" y2="0.95" width="0.1" layer="51"/>
-<wire x1="-0.95" y1="0.95" x2="-0.95" y2="0.45" width="0.1" layer="51"/>
-<wire x1="-0.95" y1="0.45" x2="-0.65" y2="0.45" width="0.1" layer="51"/>
-<wire x1="0.65" y1="-0.45" x2="0.65" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="0.65" y1="-0.95" x2="0.95" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="0.95" y1="-0.95" x2="0.95" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="0.95" y1="-0.45" x2="0.65" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="0.15" y1="-0.45" x2="0.15" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="0.15" y1="-0.95" x2="-0.15" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="-0.15" y1="-0.95" x2="-0.15" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="-0.15" y1="-0.45" x2="0.15" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="-0.65" y1="-0.45" x2="-0.65" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="-0.65" y1="-0.95" x2="-0.95" y2="-0.95" width="0.1" layer="51"/>
-<wire x1="-0.95" y1="-0.95" x2="-0.95" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="-0.95" y1="-0.45" x2="-0.65" y2="-0.45" width="0.1" layer="51"/>
-<wire x1="1" y1="1" x2="1" y2="-1" width="0.1" layer="51"/>
-<wire x1="1" y1="-1" x2="-1" y2="-1" width="0.1" layer="51"/>
-<wire x1="-1" y1="-1" x2="-1" y2="1" width="0.1" layer="51"/>
-<wire x1="-1" y1="1" x2="1" y2="1" width="0.1" layer="51"/>
+<smd name="CKI" x="-0.85" y="0.254" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<smd name="CKO" x="0.85" y="0.254" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<smd name="VDD" x="0.85" y="-0.546" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<smd name="SDI" x="-0.85" y="1.054" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<smd name="GND" x="-0.85" y="-0.546" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<smd name="SDO" x="0.85" y="1.054" dx="0.7" dy="0.4" layer="1" rot="R180" cream="no"/>
+<wire x1="-0.45" y1="0.104" x2="-0.45" y2="0.404" width="0.1" layer="51"/>
+<wire x1="-0.45" y1="0.404" x2="-0.95" y2="0.404" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="0.404" x2="-0.95" y2="0.104" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="0.104" x2="-0.45" y2="0.104" width="0.1" layer="51"/>
+<wire x1="-0.45" y1="0.904" x2="-0.45" y2="1.204" width="0.1" layer="51"/>
+<wire x1="-0.45" y1="1.204" x2="-0.95" y2="1.204" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="1.204" x2="-0.95" y2="0.904" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="0.904" x2="-0.45" y2="0.904" width="0.1" layer="51"/>
+<wire x1="-0.45" y1="-0.396" x2="-0.95" y2="-0.396" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="-0.396" x2="-0.95" y2="-0.696" width="0.1" layer="51"/>
+<wire x1="-0.95" y1="-0.696" x2="-0.45" y2="-0.696" width="0.1" layer="51"/>
+<wire x1="-0.45" y1="-0.696" x2="-0.45" y2="-0.396" width="0.1" layer="51"/>
+<wire x1="0.45" y1="0.904" x2="0.95" y2="0.904" width="0.1" layer="51"/>
+<wire x1="0.95" y1="0.904" x2="0.95" y2="1.204" width="0.1" layer="51"/>
+<wire x1="0.95" y1="1.204" x2="0.45" y2="1.204" width="0.1" layer="51"/>
+<wire x1="0.45" y1="1.204" x2="0.45" y2="0.904" width="0.1" layer="51"/>
+<wire x1="0.45" y1="0.404" x2="0.95" y2="0.404" width="0.1" layer="51"/>
+<wire x1="0.95" y1="0.404" x2="0.95" y2="0.104" width="0.1" layer="51"/>
+<wire x1="0.95" y1="0.104" x2="0.45" y2="0.104" width="0.1" layer="51"/>
+<wire x1="0.45" y1="0.104" x2="0.45" y2="0.404" width="0.1" layer="51"/>
+<wire x1="0.45" y1="-0.396" x2="0.95" y2="-0.396" width="0.1" layer="51"/>
+<wire x1="0.95" y1="-0.396" x2="0.95" y2="-0.696" width="0.1" layer="51"/>
+<wire x1="0.95" y1="-0.696" x2="0.45" y2="-0.696" width="0.1" layer="51"/>
+<wire x1="0.45" y1="-0.696" x2="0.45" y2="-0.396" width="0.1" layer="51"/>
+<wire x1="-1" y1="1.254" x2="1" y2="1.254" width="0.1" layer="51"/>
+<wire x1="1" y1="1.254" x2="1" y2="-0.746" width="0.1" layer="51"/>
+<wire x1="1" y1="-0.746" x2="-1" y2="-0.746" width="0.1" layer="51"/>
+<wire x1="-1" y1="-0.746" x2="-1" y2="1.254" width="0.1" layer="51"/>
 <text x="0" y="1.632" size="0.6096" layer="25" font="vector" ratio="20" align="bottom-center">&gt;NAME</text>
 <text x="0" y="-2.268" size="0.6096" layer="27" font="vector" ratio="20" rot="R180" align="top-center">&gt;VALUE</text>
-<wire x1="1.4" y1="0.919" x2="1.262" y2="0.919" width="0.127" layer="21"/>
-<wire x1="1.262" y1="0.919" x2="1.262" y2="1.019" width="0.127" layer="21"/>
-<wire x1="1.262" y1="1.019" x2="1.5" y2="1.019" width="0.127" layer="21"/>
-<wire x1="1.5" y1="1.019" x2="1.5" y2="0.819" width="0.127" layer="21"/>
-<wire x1="1.5" y1="0.819" x2="1.262" y2="0.819" width="0.127" layer="21"/>
-<wire x1="1.262" y1="0.819" x2="1.262" y2="0.919" width="0.127" layer="21"/>
+<wire x1="1.494" y1="1.317" x2="1.494" y2="1.179" width="0.127" layer="21"/>
+<wire x1="1.494" y1="1.179" x2="1.394" y2="1.179" width="0.127" layer="21"/>
+<wire x1="1.394" y1="1.179" x2="1.394" y2="1.417" width="0.127" layer="21"/>
+<wire x1="1.394" y1="1.417" x2="1.594" y2="1.417" width="0.127" layer="21"/>
+<wire x1="1.594" y1="1.417" x2="1.594" y2="1.179" width="0.127" layer="21"/>
+<wire x1="1.594" y1="1.179" x2="1.494" y2="1.179" width="0.127" layer="21"/>
 <rectangle x1="-0.95" y1="0.55" x2="-0.65" y2="1.15" layer="31"/>
 <rectangle x1="-0.95" y1="-1.15" x2="-0.65" y2="-0.55" layer="31"/>
 <rectangle x1="-0.15" y1="-1.15" x2="0.15" y2="-0.55" layer="31"/>
 <rectangle x1="0.65" y1="-1.15" x2="0.95" y2="-0.55" layer="31"/>
 <rectangle x1="0.65" y1="0.55" x2="0.95" y2="1.15" layer="31"/>
 <rectangle x1="-0.15" y1="0.55" x2="0.15" y2="1.15" layer="31"/>
-<rectangle x1="-1.016" y1="-1.016" x2="1.016" y2="1.016" layer="39"/>
-<rectangle x1="-0.254" y1="-0.254" x2="0.254" y2="0" layer="51"/>
-</package>
-<package name="APA102-5050">
-<description>&lt;h3&gt;APA102C&lt;/h3&gt;
-
-&lt;p&gt;Specifications:
-&lt;ul&gt;&lt;li&gt;Pin count: 6&lt;/li&gt;
-&lt;li&gt;Size: 5.0 x 5.0 mm&lt;/li&gt;
-&lt;/ul&gt;&lt;/p&gt;
-&lt;p&gt;&lt;b&gt;Datasheet referenced for footprint:&lt;/b&gt; &lt;a href="https://cdn.sparkfun.com/datasheets/Components/LED/APA102C.pdf"&gt;APA102C&lt;/a&gt;&lt;/p&gt;</description>
-<wire x1="2.5" y1="2.5" x2="2.5" y2="-2.5" width="0.127" layer="21"/>
-<wire x1="-0.72" y1="-2.5" x2="-0.98" y2="-2.5" width="0.127" layer="21"/>
-<wire x1="-2.5" y1="-2.5" x2="-2.5" y2="2.5" width="0.127" layer="21"/>
-<circle x="0" y="0" radius="2.1" width="0.127" layer="51"/>
-<smd name="P4" x="1.75" y="2.1" dx="2.2" dy="1" layer="1" rot="R270" cream="no"/>
-<smd name="P5" x="0" y="2.1" dx="2.2" dy="1.1" layer="1" rot="R270" cream="no"/>
-<smd name="P6" x="-1.75" y="2.1" dx="2.2" dy="1" layer="1" rot="R270" cream="no"/>
-<smd name="P1" x="-1.75" y="-2.1" dx="2.2" dy="1" layer="1" rot="R270" cream="no"/>
-<smd name="P2" x="0" y="-2.1" dx="2.2" dy="1.1" layer="1" rot="R270" cream="no"/>
-<smd name="P3" x="1.75" y="-2.1" dx="2.2" dy="1" layer="1" rot="R270" cream="no"/>
-<text x="0.04" y="3.755" size="0.6096" layer="25" font="vector" ratio="20" align="bottom-center">&gt;NAME</text>
-<text x="0" y="-4.191" size="0.6096" layer="27" font="vector" ratio="20" align="bottom-center">&gt;VALUE</text>
-<rectangle x1="-2.25" y1="-3.2" x2="-1.5" y2="-1.125" layer="31"/>
-<rectangle x1="-0.375" y1="-3.2" x2="0.375" y2="-1.125" layer="31"/>
-<rectangle x1="1.5" y1="-3.2" x2="2.25" y2="-1.125" layer="31"/>
-<rectangle x1="1.5" y1="1.125" x2="2.25" y2="3.2" layer="31"/>
-<rectangle x1="-0.375" y1="1.125" x2="0.375" y2="3.2" layer="31"/>
-<rectangle x1="-2.25" y1="1.125" x2="-1.5" y2="3.2" layer="31"/>
-<wire x1="0.98" y1="-2.5" x2="0.72" y2="-2.5" width="0.127" layer="21"/>
-<wire x1="0.98" y1="2.5" x2="0.72" y2="2.5" width="0.127" layer="21"/>
-<wire x1="-0.72" y1="2.5" x2="-0.98" y2="2.5" width="0.127" layer="21"/>
-<rectangle x1="-2.55" y1="-0.89" x2="-1" y2="0" layer="21"/>
-<circle x="-2.921" y="-2.794" radius="0.2032" width="0" layer="21"/>
+<rectangle x1="-1.016" y1="-0.762" x2="1.016" y2="1.27" layer="39" rot="R90"/>
+<pad name="GND_VIA" x="-1.8" y="-0.6" drill="0.2"/>
+<pad name="5V_VIA" x="1.8" y="-0.6" drill="0.2"/>
 </package>
 </packages>
 <symbols>
@@ -3852,27 +3809,12 @@ Common names: APA102, Dotstar, etc.
 <connect gate="G$1" pin="CO" pad="CKO"/>
 <connect gate="G$1" pin="DI" pad="SDI"/>
 <connect gate="G$1" pin="DO" pad="SDO"/>
-<connect gate="G$1" pin="GND" pad="GND"/>
-<connect gate="G$1" pin="VCC" pad="VDD"/>
+<connect gate="G$1" pin="GND" pad="GND GND_VIA"/>
+<connect gate="G$1" pin="VCC" pad="5V_VIA VDD"/>
 </connects>
 <technologies>
 <technology name="">
 <attribute name="PROD_ID" value="DIO-14111" constant="no"/>
-</technology>
-</technologies>
-</device>
-<device name="-5050" package="APA102-5050">
-<connects>
-<connect gate="G$1" pin="CI" pad="P2"/>
-<connect gate="G$1" pin="CO" pad="P5"/>
-<connect gate="G$1" pin="DI" pad="P1"/>
-<connect gate="G$1" pin="DO" pad="P6"/>
-<connect gate="G$1" pin="GND" pad="P3"/>
-<connect gate="G$1" pin="VCC" pad="P4"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="PROD_ID" value="DIO-13739" constant="no"/>
 </technology>
 </technologies>
 </device>
@@ -3899,9 +3841,9 @@ Common names: APA102, Dotstar, etc.
 <part name="+3V2" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="+3V3" device=""/>
 <part name="R1" library="adafruit" library_urn="urn:adsk.eagle:library:420" deviceset="R-US_" device="R0603" package3d_urn="urn:adsk.eagle:package:6240565/1" value="10k"/>
 <part name="R2" library="adafruit" library_urn="urn:adsk.eagle:library:420" deviceset="R-US_" device="R0603" package3d_urn="urn:adsk.eagle:package:6240565/1" value="10k"/>
-<part name="D1" library="SparkFun-LED" deviceset="APA102" device="-2020"/>
-<part name="D2" library="SparkFun-LED" deviceset="APA102" device="-2020"/>
-<part name="D3" library="SparkFun-LED" deviceset="APA102" device="-2020"/>
+<part name="D1" library="custom" deviceset="APA102" device="-2020"/>
+<part name="D2" library="custom" deviceset="APA102" device="-2020"/>
+<part name="D3" library="custom" deviceset="APA102" device="-2020"/>
 <part name="GND4" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 </parts>
 <sheets>

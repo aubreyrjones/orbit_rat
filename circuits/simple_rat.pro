@@ -2,24 +2,24 @@ EAGLE AutoRouter Statistics:
 
 Job           : /home/netzapper/emdev/ez_sticks/circuits/simple_rat.brd
 
-Start at      : 12:23:53 (4/15/22)
-End at        : 12:23:56 (4/15/22)
-Elapsed time  : 00:00:01
+Start at      : 12:03:14 (4/23/22)
+End at        : 12:03:56 (4/23/22)
+Elapsed time  : 00:00:41
 
-Signals       :    15   RoutingGrid: 9.84252 mil  Layers: 4
-Connections   :    32   predefined:  18 ( 8 Vias )
+Signals       :    15   RoutingGrid: 4.25 mil  Layers: 4
+Connections   :    38   predefined:  28 ( 2 Vias )
 
-Router memory :   896448
+Router memory :   1978648
 
-Passname          :     Route Optimize1 Optimize2 Optimize3 Optimize4
+Passname          : TopRouter     Route Optimize1 Optimize2 Optimize3 Optimize4
 
-Time per pass     :  00:00:00  00:00:00  00:00:01  00:00:00  00:00:00
-Number of Ripups  :         0         0         0         0         0
-max. Level        :         0         0         0         0         0
-max. Total        :         0         0         0         0         0
+Time per pass     :  00:00:41  00:00:00  00:00:00  00:00:00  00:00:00  00:00:00
+Number of Ripups  :         0         0         0         0         0         0
+max. Level        :         0         0         0         0         0         0
+max. Total        :         0         0         0         0         0         0
 
-Routed            :        14        14        14        14        14
-Vias              :         3         2         2         0         0
-Resolution        :   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %
+Routed            :        10        10        10        10        10        10
+Vias              :         0         0         0         0         0         0
+Resolution        :   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %
 
 Final             : 100.0% finished
