@@ -296,8 +296,8 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define ENDPOINT6_CONFIG	ENDPOINT_TRANSMIT_ONLY
 
 #elif defined(USB_SERIAL_HID)
-  #define VENDOR_ID		0xB1EE //0x16c0
-  #define PRODUCT_ID		0xCA75 // 0x0487
+  #define VENDOR_ID		0xB1EE 
+  #define PRODUCT_ID		0xCA75 
   //#define VENDOR_ID		0x16c0
   //#define PRODUCT_ID		0x0487
   #define DEVICE_CLASS		0xEF

@@ -555,6 +555,8 @@ void setup() {
       axisExtents[i][1] = axisValues[i];
     }
   }
+
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 Metro joystickMetro(joystick_interval);
@@ -562,6 +564,7 @@ Metro mouseMetro(mouse_interval);
 Metro serialMetro(serial_interval);
 
 void loop() {
+  digitalWrite(LED_BUILTIN, false);
   readSticks();
   updateButtons();
   normalizeSticks();
@@ -608,5 +611,7 @@ void loop() {
       }
     }
   }
+
+  digitalWrite(LED_BUILTIN, true);
 }
 
