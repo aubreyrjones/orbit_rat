@@ -23,6 +23,7 @@ constexpr auto NULL_AXIS = 0;
 struct StickMode {
   const MovementMode move; // which movement mode?
   const StickCurve& curve; // how fast and on what curve to move the mouse or wheel?
+  const uint32_t indicator = rgb(255, 0, 0); // what color should the indicator be?
   const bool activeButtons[3] = {false, false, false}; // which buttons to press? left, middle, right
 
   const int activeKey = 0; // which key to hold down during mouse motion

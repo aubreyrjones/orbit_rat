@@ -5,6 +5,11 @@ constexpr float exp_entry(float expCoef, float x, float scale = 1.0f) {
   return scale * pow(x, 2.71828 * expCoef);
 }
 
+// get a packed RGB color for the LEDs.
+constexpr uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
+    return ((uint32_t)g << 16) | ((uint32_t)r << 8) | b;
+  }
+
 // Helper functions, used to make compile-time std::array concatenation. Quite ugly, but very simple.
 namespace detail
 {

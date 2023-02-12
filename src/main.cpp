@@ -3,6 +3,7 @@
 #include <Bounce2.h>
 #include <Metro.h>
 #include <functional>
+#include <Adafruit_DotStar.h>
 #include "config_types.hpp"
 
 /**
@@ -21,14 +22,14 @@ constexpr auto zoomScrollCurve = make_curve(1400, 0.6); // note that scroll spee
 // in the order they're defined. Check `config_types.hpp` for details.
 constexpr auto stickModes = declare_mode_map(
   std::array { // stick 0
-    StickMode { MovementMode::REWIND, panCurve, {false, true, false} },
-    StickMode { MovementMode::STUTTER, panCurve, {false, true, false}, .motionThreshold = 25 },
-    StickMode { MovementMode::STUTTER, panCurve, {false, false, true} }
+    StickMode { MovementMode::REWIND, panCurve, .indicator = rgb(255, 0, 0), {false, true, false} },
+    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 255, 0), {false, true, false}, .motionThreshold = 25 },
+    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 0, 255), {false, false, true} }
   },
   std::array { // stick 1
-    StickMode { MovementMode::SCROLL, zoomScrollCurve, .horDir = NULL_AXIS},
-    StickMode { MovementMode::REWIND, orbitCurve, {false, true, false}, KEY_LEFT_SHIFT },
-    StickMode { MovementMode::REWIND, orbitCurve, {true, false, false}}
+    StickMode { MovementMode::SCROLL, zoomScrollCurve, .indicator = rgb(255, 0, 0), .horDir = NULL_AXIS},
+    StickMode { MovementMode::REWIND, orbitCurve, .indicator = rgb(0, 255, 0), {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, orbitCurve, .indicator = rgb(0, 0, 255), {true, false, false}}
   }
 );
 
@@ -130,6 +131,11 @@ constexpr uint8_t axisPins[] = {
   7, 8, 0, 1       // pcb rat
 };
 
+// Which LED indices go with the sticks?
+constexpr uint8_t stickLEDs[] = {
+  0, 2
+};
+
 constexpr int n_buttons = 2 + macroKeyCount; // number of buttons
 
 // which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
@@ -144,6 +150,12 @@ constexpr uint8_t buttonPins[] = {
   4, 5, 6, 7, 8, 9 // macro rat
 };
 
+// Which LED index is the first of the macro keys?
+constexpr uint8_t buttonLEDMap[] = {
+  0, 2, 
+  3, 4, 5, 6, 7, 8
+};
+
 /**
  * END CONFIGURATION
 */
@@ -154,13 +166,18 @@ constexpr uint8_t buttonPins[] = {
 int16_t axisValues[n_axes] = {0, 0, 0, 0};
 
 // button debouncers
-Bounce buttons[n_buttons] = {Bounce(), Bounce()};
+std::array<Bounce, n_buttons> buttons {};
 
-bool buttonState[n_buttons] = {false, false};
+// button state
+std::array<bool, n_buttons> buttonState {};
+
+std::array<uint32_t, n_buttons> buttonColorCache {};
 
 // axis values in the range (-1, 1)
-float normalizedAxes[n_axes] = {0, 0, 0, 0};
+std::array<float, n_axes> normalizedAxes{};
 
+// LEDs
+Adafruit_DotStar ledStrip(9, 11, 13, DOTSTAR_BRG);
 
 // forward declaration
 void doUnwind(int unwindAccumulator[2]);
@@ -193,6 +210,16 @@ struct StickState {
   bool buttonsActivated = false; // are we currently holding down mousebuttons and keys?
 
   StickState(int index) : index(index), xAxis(index * 2), yAxis(index * 2 + 1) {}
+
+  // advance the active mode by one, looping around at the end.button
+  void advanceActiveMode() {
+    activeStickMode = (activeStickMode + 1) % stickModes.count(index);
+    updateStickLED();
+  }
+
+  void updateStickLED() {
+    ledStrip.setPixelColor(stickLEDs[index], mode().indicator);  
+  }
 
   float x() const { return normalizedAxes[xAxis]; }
   float y() const { return normalizedAxes[yAxis]; }
@@ -505,7 +532,8 @@ void null_button(int) {}
 // basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
   if (sticks[button].stickActive) return; // don't change the mode on the active stick.
-  sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
+  //sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
+  sticks[button].advanceActiveMode();
 };
 
 button_func button_clicked[] = {
@@ -533,12 +561,17 @@ void updateButtons() {
 
       buttonState[i] = true;
       button_clicked[i](i);
+
+      buttonColorCache[i] = ledStrip.getPixelColor(buttonLEDMap[i]);
+      ledStrip.setPixelColor(buttonLEDMap[i], 0);
     }
     else if (buttons[i].rose()) {
       if constexpr (serial_status_reports && serial_buttons) {
         Serial.print("BR ");
         Serial.println(i);
       }
+
+      ledStrip.setPixelColor(buttonLEDMap[i], buttonColorCache[i]);
 
       buttonState[i] = false;
     }
@@ -569,6 +602,15 @@ void setup() {
   }
 
   pinMode(LED_BUILTIN, OUTPUT);
+
+  ledStrip.begin();
+  ledStrip.fill(0x00ffffff, 0, 9);
+  ledStrip.setBrightness(1);
+
+  sticks[0].updateStickLED();
+  sticks[1].updateStickLED();
+
+  ledStrip.show();
 }
 
 Metro joystickMetro(joystick_interval);
@@ -624,6 +666,7 @@ void loop() {
     }
   }
 
+  ledStrip.show();
   digitalWrite(LED_BUILTIN, true);
 }
 
