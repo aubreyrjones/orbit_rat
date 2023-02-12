@@ -69,9 +69,9 @@ constexpr bool send_joystick_hid = true; // (also) send HID joystick records for
 constexpr int joystick_interval = 10; // minimum interval between joystick HID reports, in ms.
 
 /* USB serial options */
-constexpr bool serial_status_reports = false; // (also) output structured serial reports
-constexpr bool serial_raw_axes = true; // report raw axis values
-constexpr bool serial_norm_axes = true; // report normalized axis values
+constexpr bool serial_status_reports = true; // (also) output structured serial reports
+constexpr bool serial_raw_axes = false; // report raw axis values
+constexpr bool serial_norm_axes = false; // report normalized axis values
 constexpr bool serial_buttons = true; // report button presses
 constexpr int serial_interval = 100; // minimum interval between serial axis reports, in ms
 /**
@@ -85,6 +85,8 @@ constexpr int serial_interval = 100; // minimum interval between serial axis rep
 /* HARDWARE CONFIGURATION */
 
 constexpr bool hasSpinner = false; // have you got a rotary encoder installed?
+
+constexpr int macroKeyCount = 6; // number of macro keys.
 
 /**
  * Axis, stick, and button ordering:
@@ -128,7 +130,7 @@ constexpr uint8_t axisPins[] = {
   7, 8, 0, 1       // pcb rat
 };
 
-constexpr int n_buttons = hasSpinner ? 2 : 2; // number of buttons
+constexpr int n_buttons = 2 + macroKeyCount; // number of buttons
 
 // which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
 // first two pins listed should be for the buttons _on_ stick 0 and stick 1.
@@ -138,7 +140,8 @@ constexpr int n_buttons = hasSpinner ? 2 : 2; // number of buttons
 // doesn't keep them in the table if you have the spinner disabled.
 constexpr uint8_t buttonPins[] = { 
   //16, 23, 0       // breadboard rat
-  23, 16, 0       // pcb rat
+  23, 16,      // pcb rat
+  4, 5, 6, 7, 8, 9 // macro rat
 };
 
 /**
@@ -497,6 +500,8 @@ void sendMouse() {
 // typedef for a button activation callback.
 using button_func = std::function<void(int)>;
 
+void null_button(int) {}
+
 // basic button callback that simply advances the active stick mode.
 void advance_mode(int button) {
   if (sticks[button].stickActive) return; // don't change the mode on the active stick.
@@ -504,8 +509,15 @@ void advance_mode(int button) {
 };
 
 button_func button_clicked[] = {
+  advance_mode, // stick buttons
   advance_mode,
-  advance_mode
+
+  null_button, // macro buttons
+  null_button,
+  null_button,
+  null_button,
+  null_button,
+  null_button
 };
 
 // update buttons and call callbacks when they're pressed.
