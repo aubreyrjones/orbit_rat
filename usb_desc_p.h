@@ -296,8 +296,8 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define ENDPOINT6_CONFIG	ENDPOINT_TRANSMIT_ONLY
 
 #elif defined(USB_SERIAL_HID)
-  #define VENDOR_ID		0xB1EE 
-  #define PRODUCT_ID		0xCA75 
+  #define VENDOR_ID		0x16c0  
+  #define PRODUCT_ID		0x27d9 
   //#define VENDOR_ID		0x16c0
   //#define PRODUCT_ID		0x0487
   #define DEVICE_CLASS		0xEF
@@ -305,12 +305,12 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define DEVICE_PROTOCOL	0x01
   #define MANUFACTURER_NAME	{'G','r','e','y','H','e','l','i','x', '.', 'c', 'o', 'm'}
   #define MANUFACTURER_NAME_LEN	13
-  #define PRODUCT_NAME		{'O','r','b','i','t','R','a','t','v', '1'}
-  #define PRODUCT_NAME_LEN	10
+  #define PRODUCT_NAME		{'O','r','b','i','t','R','a','t'}
+  #define PRODUCT_NAME_LEN	8
   #define EP0_SIZE		64
-  #define NUM_ENDPOINTS		9 // [OR] patched
+  #define NUM_ENDPOINTS		8 // [OR] patched
   #define NUM_USB_BUFFERS	30
-  #define NUM_INTERFACE		7
+  #define NUM_INTERFACE		6
   #define CDC_IAD_DESCRIPTOR	1
   #define CDC_STATUS_INTERFACE	0
   #define CDC_DATA_INTERFACE	1	// Serial
@@ -324,10 +324,10 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define KEYBOARD_ENDPOINT     1
   #define KEYBOARD_SIZE         8
   #define KEYBOARD_INTERVAL     1
-  #define KEYMEDIA_INTERFACE    5	// Keyboard Media Keys
-  #define KEYMEDIA_ENDPOINT     7
-  #define KEYMEDIA_SIZE         8
-  #define KEYMEDIA_INTERVAL     4
+  // #define KEYMEDIA_INTERFACE    5	// Keyboard Media Keys
+  // #define KEYMEDIA_ENDPOINT     7
+  // #define KEYMEDIA_SIZE         8
+  // #define KEYMEDIA_INTERVAL     4
   #define MOUSE_INTERFACE       3	// Mouse
   #define MOUSE_ENDPOINT        5
   #define MOUSE_SIZE            8
@@ -339,11 +339,11 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   
   #define RAWHID_USAGE_PAGE	0xFFAB  // recommended: 0xFF00 to 0xFFFF
   #define RAWHID_USAGE		0x0200  // recommended: 0x0100 to 0xFFFF
-  #define RAWHID_INTERFACE      6	// RawHID
-  #define RAWHID_TX_ENDPOINT    8
+  #define RAWHID_INTERFACE      5	// RawHID
+  #define RAWHID_TX_ENDPOINT    7
   #define RAWHID_TX_SIZE        64
   #define RAWHID_TX_INTERVAL    1
-  #define RAWHID_RX_ENDPOINT    9
+  #define RAWHID_RX_ENDPOINT    8
   #define RAWHID_RX_SIZE        64
   #define RAWHID_RX_INTERVAL    1
   
@@ -353,9 +353,9 @@ let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
   #define ENDPOINT4_CONFIG	ENDPOINT_TRANSMIT_ONLY
   #define ENDPOINT5_CONFIG	ENDPOINT_TRANSMIT_ONLY
   #define ENDPOINT6_CONFIG	ENDPOINT_TRANSMIT_ONLY
-  #define ENDPOINT7_CONFIG	ENDPOINT_TRANSMIT_ONLY
-  #define ENDPOINT8_CONFIG  ENDPOINT_TRANSMIT_ONLY
-  #define ENDPOINT9_CONFIG  ENDPOINT_RECEIVE_ONLY
+  //#define ENDPOINT7_CONFIG	ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT7_CONFIG  ENDPOINT_TRANSMIT_ONLY
+  #define ENDPOINT8_CONFIG  ENDPOINT_RECEIVE_ONLY
 
 #elif defined(USB_TOUCHSCREEN)
   #define VENDOR_ID		0x16C0

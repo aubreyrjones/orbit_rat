@@ -65,7 +65,7 @@ constexpr bool center_on_startup = true; // record startup reading from sticks a
 constexpr bool autocal = true; // attempt to automatically calibrate during use.
 
 /* HID joystick options */
-constexpr bool send_joystick_hid = false; // (also) send HID joystick records for the sticks and buttons?
+constexpr bool send_joystick_hid = true; // (also) send HID joystick records for the sticks and buttons?
 constexpr int joystick_interval = 10; // minimum interval between joystick HID reports, in ms.
 
 /* USB serial options */

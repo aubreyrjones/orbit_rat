@@ -4068,8 +4068,8 @@ Common names: APA102, Dotstar, etc.
 <segment>
 <pinref part="MCU" gate="G$1" pin="GND2"/>
 <pinref part="GND2" gate="1" pin="GND"/>
-<wire x1="93.98" y1="58.42" x2="111.76" y2="58.42" width="0.1524" layer="91"/>
-<wire x1="111.76" y1="58.42" x2="111.76" y2="53.34" width="0.1524" layer="91"/>
+<wire x1="93.98" y1="58.42" x2="109.22" y2="58.42" width="0.1524" layer="91"/>
+<wire x1="109.22" y1="58.42" x2="111.76" y2="53.34" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="D1" gate="G$1" pin="GND"/>

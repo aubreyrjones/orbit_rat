@@ -1,6 +1,6 @@
 from os.path import join, isfile
 import os
-from re import I
+#from re import I
 import shutil
 
 Import("env")
@@ -21,6 +21,7 @@ def doit(*args, **kwargs):
     os.remove(original_file)
     shutil.copyfile(my_file, original_file)
 
+
 def undoit(*args, **kwargs):
     if not os.path.exists(backup): return
 
@@ -28,6 +29,7 @@ def undoit(*args, **kwargs):
     os.remove(original_file)
     shutil.copyfile(backup, original_file)
     os.remove(backup)
+
 
 doit()
 env.AddPostAction("checkprogsize", undoit)

@@ -1,0 +1,15 @@
+# Sets up Linux rules that allow the OrbitRat driver to access the OrbitRat to provide
+# extended functionality.
+
+# This is a vendor/product ID reserved by Van Ooijen Technische Informatica for  
+# HID devices that don't fit into the categories or joystick, keyboard, or mouse.
+
+# This will match any device using this product/vendor ID, even if it's not an Orbit Rat.
+# However, drivers for devices of this sort are "required" to check the serial
+# number string of a device before claiming it. In the case of Orbit Rat,
+# the driver checks for `GreyHelix.com:OrbitRat`.
+
+# See https://github.com/obdev/v-usb/blob/master/usbdrv/USB-IDs-for-free.txt for more info.
+
+
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="27d9", MODE:="0666"

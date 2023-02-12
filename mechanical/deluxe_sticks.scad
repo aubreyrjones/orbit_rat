@@ -5,7 +5,7 @@ main_height = 14;
 
 clearance_diam = 5;
 bottom_diam = 5;
-top_diam = 8;
+top_diam = 12;
 ball_diam = top_diam;
 top_height = 12 - (ball_diam / 2);
 
