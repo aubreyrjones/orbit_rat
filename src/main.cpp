@@ -22,14 +22,14 @@ constexpr auto zoomScrollCurve = make_curve(1400, 0.6); // note that scroll spee
 // in the order they're defined. Check `config_types.hpp` for details.
 constexpr auto stickModes = declare_mode_map(
   std::array { // stick 0
-    StickMode { MovementMode::REWIND, panCurve, .indicator = rgb(255, 0, 0), {false, true, false} },
-    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 255, 0), {false, true, false}, .motionThreshold = 25 },
-    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 0, 255), {false, false, true} }
+    StickMode { MovementMode::REWIND, panCurve,  .indicator = rgb(50, 0, 0), {false, true, false} },
+    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 50, 0), {false, true, false}, .motionThreshold = 25 },
+    StickMode { MovementMode::STUTTER, panCurve, .indicator = rgb(0, 0, 50), {false, false, true} }
   },
   std::array { // stick 1
-    StickMode { MovementMode::SCROLL, zoomScrollCurve, .indicator = rgb(255, 0, 0), .horDir = NULL_AXIS},
-    StickMode { MovementMode::REWIND, orbitCurve, .indicator = rgb(0, 255, 0), {false, true, false}, KEY_LEFT_SHIFT },
-    StickMode { MovementMode::REWIND, orbitCurve, .indicator = rgb(0, 0, 255), {true, false, false}}
+    StickMode { MovementMode::SCROLL, zoomScrollCurve, .indicator = rgb(50, 0, 0), .horDir = NULL_AXIS},
+    StickMode { MovementMode::REWIND, orbitCurve,      .indicator = rgb(0, 50, 0), {false, true, false}, KEY_LEFT_SHIFT },
+    StickMode { MovementMode::REWIND, orbitCurve,      .indicator = rgb(0, 0, 50), {true, false, false}}
   }
 );
 
@@ -53,6 +53,75 @@ constexpr int button_debounce_interval = 25; // how many ms any button needs to 
 constexpr int mouse_interval = 10; // minimum interval between mouse motion updates, in ms. (not recommended to change)
 // note that changing the mouse_interval will affect all mouse and scrolling speeds
 
+// Key macros.
+
+constexpr uint32_t macroColors[] = {
+  rgb(0x42, 0xFF, 0x00),
+  rgb(0x42, 0xFF, 0x00),
+  rgb(0x42, 0xFF, 0x00),
+  rgb(50, 0, 50),
+  rgb(50, 0, 50),
+  rgb(50, 0, 50)
+};
+
+using MacroFunction = std::function<void(bool)>;
+const std::array<MacroFunction, 6> buttonMacros = {
+  [](bool pressed) {
+    if (pressed) {
+      Mouse.press(MOUSE_RIGHT);
+    }
+    else {
+      Mouse.release(MOUSE_RIGHT);
+    }
+  },
+
+  [](bool pressed) {
+    if (pressed) {
+      Mouse.press(MOUSE_MIDDLE);
+    }
+    else {
+      Mouse.release(MOUSE_MIDDLE);
+    }
+  },
+
+  [](bool pressed) {
+    if (pressed) {
+      Mouse.press(MOUSE_LEFT);
+    }
+    else {
+      Mouse.release(MOUSE_LEFT);
+    }
+  },
+
+  [](bool pressed) {
+    if (pressed) {
+      Keyboard.press(KEY_LEFT_SHIFT);
+    }
+    else {
+      Keyboard.release(KEY_LEFT_SHIFT);
+    }
+  },
+  
+  [](bool pressed) {
+    if (pressed) {
+      Keyboard.press(KEY_LEFT_ALT);
+    }
+    else {
+      Keyboard.release(KEY_LEFT_ALT);
+    }
+  },
+
+  [](bool pressed) {
+    if (pressed) {
+      Keyboard.press(KEY_LEFT_CTRL);
+    }
+    else {
+      Keyboard.release(KEY_LEFT_CTRL);
+    }
+  }
+};
+
+
 // firmware behavior.
 
 #ifdef SUPPORT_RAT_DRIVER
@@ -70,7 +139,7 @@ constexpr bool send_joystick_hid = true; // (also) send HID joystick records for
 constexpr int joystick_interval = 10; // minimum interval between joystick HID reports, in ms.
 
 /* USB serial options */
-constexpr bool serial_status_reports = true; // (also) output structured serial reports
+constexpr bool serial_status_reports = false; // (also) output structured serial reports
 constexpr bool serial_raw_axes = false; // report raw axis values
 constexpr bool serial_norm_axes = false; // report normalized axis values
 constexpr bool serial_buttons = true; // report button presses
@@ -84,8 +153,6 @@ constexpr int serial_interval = 100; // minimum interval between serial axis rep
 */
 
 /* HARDWARE CONFIGURATION */
-
-constexpr bool hasSpinner = false; // have you got a rotary encoder installed?
 
 constexpr int macroKeyCount = 6; // number of macro keys.
 
@@ -140,10 +207,10 @@ constexpr int n_buttons = 2 + macroKeyCount; // number of buttons
 
 // which pins are buttons attached to? These are Teensy DIGITAL pin numbers.
 // first two pins listed should be for the buttons _on_ stick 0 and stick 1.
-// the rest are for the spinner buttons.
+// the rest are for the macro buttons.
 // something neat! since this is constexpr, and `n_buttons` is also const
 // the compiler seems to know that the unused values aren't referenced and
-// doesn't keep them in the table if you have the spinner disabled.
+// doesn't keep them in the table if you have the macros disabled.
 constexpr uint8_t buttonPins[] = { 
   //16, 23, 0       // breadboard rat
   23, 16,      // pcb rat
@@ -171,6 +238,7 @@ std::array<Bounce, n_buttons> buttons {};
 // button state
 std::array<bool, n_buttons> buttonState {};
 
+// button colors before they're turned off during press.
 std::array<uint32_t, n_buttons> buttonColorCache {};
 
 // axis values in the range (-1, 1)
@@ -525,27 +593,34 @@ void sendMouse() {
 }
 
 // typedef for a button activation callback.
-using button_func = std::function<void(int)>;
+using button_func = std::function<void(int, bool)>;
 
-void null_button(int) {}
+// button does nothing.
+void null_button(int, bool) {}
+
+void macro_button(int button, bool pressed) {
+  const auto macro = button - 2;
+  buttonMacros[macro](pressed);
+}
 
 // basic button callback that simply advances the active stick mode.
-void advance_mode(int button) {
+void advance_mode(int button, bool pressed) {
+  if (!pressed) return; // only fire on press-down
+
   if (sticks[button].stickActive) return; // don't change the mode on the active stick.
-  //sticks[button].activeStickMode = (sticks[button].activeStickMode + 1) % stickModes.count(button);
   sticks[button].advanceActiveMode();
 };
 
-button_func button_clicked[] = {
+const button_func button_clicked[] = {
   advance_mode, // stick buttons
   advance_mode,
 
-  null_button, // macro buttons
-  null_button,
-  null_button,
-  null_button,
-  null_button,
-  null_button
+  macro_button,
+  macro_button,
+  macro_button,
+  macro_button,
+  macro_button,
+  macro_button
 };
 
 // update buttons and call callbacks when they're pressed.
@@ -560,7 +635,7 @@ void updateButtons() {
       }
 
       buttonState[i] = true;
-      button_clicked[i](i);
+      button_clicked[i](i, true);
 
       buttonColorCache[i] = ledStrip.getPixelColor(buttonLEDMap[i]);
       ledStrip.setPixelColor(buttonLEDMap[i], 0);
@@ -574,6 +649,7 @@ void updateButtons() {
       ledStrip.setPixelColor(buttonLEDMap[i], buttonColorCache[i]);
 
       buttonState[i] = false;
+      button_clicked[i](i, false);
     }
   }
 }
@@ -603,12 +679,17 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
 
+  // initialize RGB LEDs
   ledStrip.begin();
-  ledStrip.fill(0x00ffffff, 0, 9);
-  ledStrip.setBrightness(1);
+  ledStrip.fill(0x50, 0, 9);
+  ledStrip.setBrightness(20);
 
   sticks[0].updateStickLED();
   sticks[1].updateStickLED();
+
+  for (int i = 0; i < macroKeyCount; i++) {
+    ledStrip.setPixelColor(3 + i, macroColors[i]);
+  }
 
   ledStrip.show();
 }
